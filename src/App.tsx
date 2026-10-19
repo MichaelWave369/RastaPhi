@@ -14,7 +14,9 @@ import { exportCalibrationPDF } from './lib/calibration';
 import { exportPosterPDF } from './lib/pdf';
 import { sanitizeSvg, SVG_SIZE_LIMIT, type SafeSvg } from './lib/svg';
 import ProjectVault from './ProjectVault';
-import { type RastaProject, validateProject } from './lib/project';
+import MosaicLab from './MosaicLab';
+import { composeMosaic, type MosaicRecipe } from './lib/mosaic';
+import { PROJECT_VERSION, type RastaProject, validateProject } from './lib/project';
 import { captureProjectAsset, restoreProjectAsset } from './lib/portable';
 import { type BlueprintOptions, type GridStep, type GridInk, gridLinesForRegion, GRID_INK_RGB } from './lib/blueprint';
 
@@ -69,6 +71,8 @@ function App() {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [imageName, setImageName] = useState('RastaPhi demo artwork');
   const [svgSource, setSvgSource] = useState<SafeSvg | null>(null);
+  const [mosaicSource, setMosaicSource] = useState<MosaicRecipe | null>(null);
+  const [mosaicProcessing, setMosaicProcessing] = useState(false);
   const [originalRasterFile, setOriginalRasterFile] = useState<File | null>(null);
   const [projectTitle, setProjectTitle] = useState('My RastaPhi wall poster');
   const [posterWidth, setPosterWidth] = useState(24);
@@ -117,6 +121,7 @@ function App() {
           URL.revokeObjectURL(url);
           setImage(vectorImage);
           setSvgSource(safe);
+          setMosaicSource(null);
           setOriginalRasterFile(null);
           setImageName(file.name);
           setIsBlankBlueprint(false);
@@ -151,6 +156,7 @@ function App() {
       URL.revokeObjectURL(url);
       setImage(next);
       setSvgSource(null);
+      setMosaicSource(null);
       setOriginalRasterFile(file);
       setImageName(file.name);
       setIsBlankBlueprint(false);
@@ -178,6 +184,7 @@ function App() {
     blank.onload = () => {
       setImage(blank);
       setSvgSource(null);
+      setMosaicSource(null);
       setOriginalRasterFile(null);
       setImageName('Blank blueprint / measurement grid');
       setIsBlankBlueprint(true);
@@ -188,6 +195,31 @@ function App() {
       setNotice('Blank blueprint ready. Choose the grid spacing and finished print size.');
     };
     blank.src = canvas.toDataURL('image/png');
+  }
+
+  useEffect(() => {
+    if (!mosaicSource) { setMosaicProcessing(false); return; }
+    let cancelled = false;
+    setMosaicProcessing(true);
+    composeMosaic(mosaicSource, posterWidth, posterHeight).then(result => {
+      if (cancelled) return;
+      setImage(result);
+      setImageName('MosaicLab photo wall');
+      setSvgSource(null);
+      setOriginalRasterFile(null);
+      setMosaicProcessing(false);
+    }).catch(err => {
+      if (cancelled) return;
+      setMosaicProcessing(false);
+      setNotice(err instanceof Error ? err.message : 'Unable to compose MosaicLab artwork.');
+    });
+    return () => { cancelled = true; };
+  }, [mosaicSource, posterWidth, posterHeight]);
+
+  function flattenMosaic() {
+    setMosaicSource(null);
+    setImageName('Flattened MosaicLab collage');
+    setNotice('Collage flattened to a printable image. Your editable photo arrangement is no longer active: save an editable project before flattening next time.');
   }
 
   function updateWidth(n: number) {
@@ -256,7 +288,7 @@ function App() {
   }
 
   async function doExport(mode: 'all' | 'sheet' = 'all') {
-    if (!image || !layout || exporting) return;
+    if (!image || !layout || exporting || mosaicProcessing) return;
     if (mode === 'all' && layout.total > 48 && !window.confirm(
       'This poster uses ' + layout.total + ' sheets. The PDF may be large. Continue?'
     )) return;
@@ -283,10 +315,10 @@ function App() {
 
   async function snapshotProject(title: string): Promise<RastaProject> {
     if (!image) throw new Error('Wait until your artwork is ready before saving.');
-    const asset = await captureProjectAsset(image, imageName, originalRasterFile, svgSource);
+    const asset = await captureProjectAsset(image, imageName, originalRasterFile, svgSource, mosaicSource);
     return validateProject({
       format: 'rastaphi-project',
-      version: 1,
+      version: PROJECT_VERSION,
       title: title.trim(),
       savedAt: new Date().toISOString(),
       asset,
@@ -300,12 +332,13 @@ function App() {
 
   async function restoreProject(project: RastaProject): Promise<void> {
     const valid = validateProject(project);
-    const loaded = await restoreProjectAsset(valid.asset);
+    const loaded = await restoreProjectAsset(valid.asset, valid.settings.posterWidth, valid.settings.posterHeight);
     const s = valid.settings;
     // Apply editor state only AFTER the full project and its image decode successfully.
     setImage(loaded.image);
     setImageName(valid.asset.name);
     setSvgSource(loaded.svg);
+    setMosaicSource(loaded.mosaic);
     setOriginalRasterFile(null);
     setProjectTitle(valid.title);
     setPosterWidth(s.posterWidth);
@@ -356,7 +389,7 @@ function App() {
 
         <div className="workspace-heading">
           <div className="section-id"><span>01</span><div><strong>THE STUDIO</strong><small>Make something larger than life.</small></div></div>
-          <span className="version-pill"><span /> RASTAPHI R4 · V0.5</span>
+          <span className="version-pill"><span /> RASTAPHI R5 · V0.6</span>
         </div>
 
         <div className="workspace">
@@ -506,6 +539,7 @@ function App() {
               </button>
               <p className="helper-text">Grid units describe the printed artwork, not the scale of objects pictured. Verify printed measurements before technical use.</p>
             </section>
+            <MosaicLab recipe={mosaicSource} onChange={setMosaicSource} flatten={flattenMosaic} />
             <ProjectVault title={projectTitle} setTitle={setProjectTitle}
               snapshot={snapshotProject} restore={restoreProject} />
           </aside>
@@ -588,9 +622,11 @@ function App() {
             </div>
 
             <div className={'print-quality band-' + qualityBand} aria-live="polite">
-              <div><strong>{svgSource ? 'VECTOR ARTWORK' : isBlankBlueprint ? 'VECTOR REFERENCE GRID' : 'ARTWORK RESOLUTION'}</strong>
-                <span>{svgSource ? (effect === 'original' ? 'VECTOR PDF' : 'RASTER EFFECT') : isBlankBlueprint ? 'BLANK CANVAS' : sourcePpi ? sourcePpi + ' SOURCE PPI' : 'NO SOURCE'}</span></div>
-              <p>{svgSource
+              <div><strong>{mosaicSource ? 'MOSAICLAB COLLAGE' : svgSource ? 'VECTOR ARTWORK' : isBlankBlueprint ? 'VECTOR REFERENCE GRID' : 'ARTWORK RESOLUTION'}</strong>
+                <span>{mosaicSource ? mosaicSource.photos.length + ' PHOTOS' : svgSource ? (effect === 'original' ? 'VECTOR PDF' : 'RASTER EFFECT') : isBlankBlueprint ? 'BLANK CANVAS' : sourcePpi ? sourcePpi + ' SOURCE PPI' : 'NO SOURCE'}</span></div>
+              <p>{mosaicSource
+                ? 'Your collage is editable and will be saved with its source photos in Project Vault. PDF artwork is rasterized; measured Blueprint Lab grid lines remain vector.'
+                : svgSource
                 ? (effect === 'original'
                   ? 'Supported SVG geometry stays vector in PDF export, including across sheets. Text may use substitute PDF fonts.'
                   : 'An art effect is selected, so the SVG is rasterized for this export. Choose Original to keep vector geometry.')
@@ -609,13 +645,13 @@ function App() {
                 <div className="reprint-row">
                   <label htmlFor="reprintSheet">REPRINT SHEET</label>
                   <input id="reprintSheet" aria-label="Sheet to reprint" type="number" min={1} max={layout?.total ?? 1} value={currentSheet} onChange={e => { const n = Number(e.target.value); if (Number.isFinite(n) && n >= 1) setSelectedSheet(Math.min(layout?.total ?? 1, Math.floor(n))); }} />
-                  <button type="button" className="proof-action reprint-action" onClick={() => doExport('sheet')} disabled={!image || !layout || exporting}>EXPORT THIS SHEET</button>
+                  <button type="button" className="proof-action reprint-action" onClick={() => doExport('sheet')} disabled={!image || !layout || exporting || mosaicProcessing}>EXPORT THIS SHEET</button>
                 </div>
               </div>
               <label className="guide-toggle"><input type="checkbox" checked={guide} onChange={e => setGuide(e.target.checked)} /><span>Include assembly guide & 1-inch calibration square</span></label>
               {layoutState.error && <p className="error-message" role="alert">{layoutState.error}</p>}
               {notice && <p className="status-message" role="status">{notice}</p>}
-              <button type="button" className="export-button" disabled={!image || !layout || exporting} onClick={() => doExport('all')}>
+              <button type="button" className="export-button" disabled={!image || !layout || exporting || mosaicProcessing} onClick={() => doExport('all')}>
                 {exporting ? <><span className="small-spinner" /> CREATING PDF... {progress}%</> :
                   <><Download size={20} /> EXPORT PRINT-READY PDF <ArrowRight size={19} /></>}
               </button>
