@@ -13,6 +13,9 @@ import { sourcePixelsPerInch, printQualityBand, qualityDescription } from './lib
 import { exportCalibrationPDF } from './lib/calibration';
 import { exportPosterPDF } from './lib/pdf';
 import { sanitizeSvg, SVG_SIZE_LIMIT, type SafeSvg } from './lib/svg';
+import ProjectVault from './ProjectVault';
+import { type RastaProject, validateProject } from './lib/project';
+import { captureProjectAsset, restoreProjectAsset } from './lib/portable';
 import { type BlueprintOptions, type GridStep, type GridInk, gridLinesForRegion, GRID_INK_RGB } from './lib/blueprint';
 
 const effectChoices: { value: Effect; label: string; helper: string }[] = [
@@ -66,6 +69,8 @@ function App() {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [imageName, setImageName] = useState('RastaPhi demo artwork');
   const [svgSource, setSvgSource] = useState<SafeSvg | null>(null);
+  const [originalRasterFile, setOriginalRasterFile] = useState<File | null>(null);
+  const [projectTitle, setProjectTitle] = useState('My RastaPhi wall poster');
   const [posterWidth, setPosterWidth] = useState(24);
   const [posterHeight, setPosterHeight] = useState(36);
   const [ratioLocked, setRatioLocked] = useState(false);
@@ -112,6 +117,7 @@ function App() {
           URL.revokeObjectURL(url);
           setImage(vectorImage);
           setSvgSource(safe);
+          setOriginalRasterFile(null);
           setImageName(file.name);
           setIsBlankBlueprint(false);
           setEffect('original');
@@ -145,6 +151,7 @@ function App() {
       URL.revokeObjectURL(url);
       setImage(next);
       setSvgSource(null);
+      setOriginalRasterFile(file);
       setImageName(file.name);
       setIsBlankBlueprint(false);
       setNotice('');
@@ -171,6 +178,7 @@ function App() {
     blank.onload = () => {
       setImage(blank);
       setSvgSource(null);
+      setOriginalRasterFile(null);
       setImageName('Blank blueprint / measurement grid');
       setIsBlankBlueprint(true);
       setBlueprint({ step: 'inch', ink: 'cyan', coordinates: true });
@@ -273,6 +281,54 @@ function App() {
     }
   }
 
+  async function snapshotProject(title: string): Promise<RastaProject> {
+    if (!image) throw new Error('Wait until your artwork is ready before saving.');
+    const asset = await captureProjectAsset(image, imageName, originalRasterFile, svgSource);
+    return validateProject({
+      format: 'rastaphi-project',
+      version: 1,
+      title: title.trim(),
+      savedAt: new Date().toISOString(),
+      asset,
+      settings: {
+        posterWidth, posterHeight, ratioLocked, paper, orientation, margin, overlap,
+        fit, effect, dotSizeMm, ink, paperColor, guide, grid, blueprint,
+        blankBlueprint: isBlankBlueprint, selectedSheet: currentSheet, view,
+      },
+    });
+  }
+
+  async function restoreProject(project: RastaProject): Promise<void> {
+    const valid = validateProject(project);
+    const loaded = await restoreProjectAsset(valid.asset);
+    const s = valid.settings;
+    // Apply editor state only AFTER the full project and its image decode successfully.
+    setImage(loaded.image);
+    setImageName(valid.asset.name);
+    setSvgSource(loaded.svg);
+    setOriginalRasterFile(null);
+    setProjectTitle(valid.title);
+    setPosterWidth(s.posterWidth);
+    setPosterHeight(s.posterHeight);
+    setRatioLocked(s.ratioLocked);
+    setPaper(s.paper);
+    setOrientation(s.orientation);
+    setMargin(s.margin);
+    setOverlap(s.overlap);
+    setFit(s.fit);
+    setEffect(s.effect);
+    setDotSizeMm(s.dotSizeMm);
+    setInk(s.ink);
+    setPaperColor(s.paperColor);
+    setGuide(s.guide);
+    setGrid(s.grid);
+    setBlueprint(s.blueprint);
+    setIsBlankBlueprint(s.blankBlueprint);
+    setSelectedSheet(s.selectedSheet);
+    setView(s.view);
+    setNotice('Restored project: ' + valid.title);
+  }
+
   const dimString = formatDimension(posterWidth) + ' × ' + formatDimension(posterHeight);
   const visibleTiles = layout && layout.total <= 80 ? layout.tiles : [];
   const area = posterWidth * posterHeight / 144;
@@ -300,7 +356,7 @@ function App() {
 
         <div className="workspace-heading">
           <div className="section-id"><span>01</span><div><strong>THE STUDIO</strong><small>Make something larger than life.</small></div></div>
-          <span className="version-pill"><span /> RASTAPHI R3 · V0.4</span>
+          <span className="version-pill"><span /> RASTAPHI R4 · V0.5</span>
         </div>
 
         <div className="workspace">
@@ -450,6 +506,8 @@ function App() {
               </button>
               <p className="helper-text">Grid units describe the printed artwork, not the scale of objects pictured. Verify printed measurements before technical use.</p>
             </section>
+            <ProjectVault title={projectTitle} setTitle={setProjectTitle}
+              snapshot={snapshotProject} restore={restoreProject} />
           </aside>
 
           <section className="preview-col" aria-label="Poster preview and export">
