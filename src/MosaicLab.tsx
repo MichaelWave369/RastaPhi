@@ -8,6 +8,7 @@ interface MosaicProps {
   recipe: MosaicRecipe | null;
   onChange: (recipe: MosaicRecipe | null) => void;
   flatten: () => void;
+  processing: boolean;
 }
 
 const starter: MosaicRecipe = {
@@ -15,7 +16,7 @@ const starter: MosaicRecipe = {
   columns: 3, gapPercent: 3, background: '#ffffff', fit: 'cover',
 };
 
-export default function MosaicLab({ recipe, onChange, flatten }: MosaicProps) {
+export default function MosaicLab({ recipe, onChange, flatten, processing }: MosaicProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -118,9 +119,10 @@ export default function MosaicLab({ recipe, onChange, flatten }: MosaicProps) {
         <input id="mosaic-color" type="color" value={recipe.background} disabled={busy}
           onChange={e => update({ ...recipe, background: e.target.value })} />
       </div>
-      <button type="button" className="mosaic-flatten" onClick={flatten} disabled={busy}>
+      <button type="button" className="mosaic-flatten" onClick={flatten} disabled={busy || processing}>
         FLATTEN TO SINGLE IMAGE
       </button>
+      {processing && <p className="helper-text" role="status">Composing the latest photo layout...</p>}
       <p className="helper-text">Flatten keeps the finished collage in the poster studio but discards editable photo layers. Save a Project Vault backup first.</p>
     </>}
     {message && <p className="vault-message" role="status">{message}</p>}
