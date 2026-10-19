@@ -6,6 +6,16 @@ RastaPhi is an original, MIT-licensed, local-first wall-art and large-format pos
 
 **Live site after GitHub Pages is enabled:** https://michaelwave369.github.io/RastaPhi/
 
+## R3 / v0.4 SVG Studio
+
+- **Import original SVG files** in addition to PNG, JPEG, and WebP. Source SVG import is capped at **2 MB** and **3,500 supported drawing elements**.
+- **Built-in restricted SVG importer:** reconstructs a fresh, local SVG with only safe vector geometry (paths, lines, rectangles, circles, ellipses, polylines, polygons, text, and groups). Scripts, HTML/foreignObject, embedded/external images, URL links, filters, animations, references, and unsupported components are discarded.
+- **Preserve vector artwork in multipage PDFs** when the Original art treatment is selected. Each print sheet receives vector SVG geometry at the correct crop/fit and paper position. Grid overlays remain vector too.
+- **Clear fallback behavior:** DotLab, grayscale, and duotone transformations rasterize the SVG. The studio indicates when true vector output is active.
+- **Safe subset, not full SVG compatibility:** unsupported content may disappear, including SVG symbols/use, CSS classes and stylesheets, clipping masks, gradients, markers, embedded fonts, and images. Text may substitute PDF fonts. Inspect each sheet before printing. Imported SVGs are never sent to a server.
+
+Vector conversion uses [svg2pdf.js](https://github.com/yWorks/svg2pdf.js), which itself only supports part of the SVG specification. The importer limits source complexity to reduce exposure to untrusted content, but untrusted file processing can never be guaranteed risk-free. For complex SVG assets, consider simplifying in a trusted vector editor before importing.
+
 ## R2 / v0.3 Blueprint Lab
 
 - **Measured reference grids** over artwork: 1/4 inch, 1/2 inch, 1 inch, 1 cm, or 5 cm.
@@ -27,7 +37,7 @@ RastaPhi is an original, MIT-licensed, local-first wall-art and large-format pos
 ## R0 / v0.1 features
 
 - React + TypeScript + Vite; designed to publish as a static GitHub Pages website
-- Drag/drop or browse to load JPEG, PNG, and WebP images (up to 30 MB)
+- Drag/drop or browse to load JPEG, PNG, and WebP images (up to 30 MB), plus restricted SVG (up to 2 MB)
 - Real-world poster dimensions in inches with centimeter equivalents, optionally lock to image ratio
 - US Letter, A4, A3, portrait/landscape, adjustable page margins and overlap
 - Original color, monochrome, duotone, and real-world-size halftone dots
@@ -78,7 +88,7 @@ R1: print-check sheet, one-sheet proof and reprint, source resolution estimates 
 
 R2: measured vector PDF grid, global tile alignment, blank technical grid worksheets (v0.3). Future: native vector-document import, mosaic/stencil workflows, save/load local projects.
 
-R3: physical exhibit workflows with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
+R3: safe, limited native SVG import and vector-preserving printable PDFs (v0.4). Future: physical exhibit workflows with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
 
 ## License
 
