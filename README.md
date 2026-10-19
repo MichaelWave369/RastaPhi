@@ -6,6 +6,19 @@ RastaPhi is an original, MIT-licensed, local-first wall-art and large-format pos
 
 **Live site after GitHub Pages is enabled:** https://michaelwave369.github.io/RastaPhi/
 
+## R4 / v0.5 Project Vault
+
+Save and reopen complete poster projects without an account or cloud storage.
+
+- **Save locally:** Save a named project in browser IndexedDB. The local vault lists saved projects with Open, Download backup, and Delete actions.
+- **Portable file export:** Download a self-contained `.rastaphi.json` with the original raster asset embedded as a base64 data URL, or sanitized SVG source as markup. File extension and JSON version are explicit so future releases can migrate deliberately.
+- **Portable import:** Open saved project files from another computer. The importer validates dimensions, sheet limits, media data, effects, and grid options before restoring editor state. SVG artwork is re-sanitized before display or PDF conversion.
+- **Full settings restoration:** Restore finished dimensions, aspect lock, sheet type/orientation, margins, overlap, treatment, colors, DotLab size, blueprint grid, print guide, grid visibility, sheet proof selection and view.
+- **Safe replacement workflow:** Opening a project warns before replacing unsaved edits. Deleting a local project requires confirmation.
+- **Local-first and manual:** No account, uploads, tracking, or automatic cloud sync. Browser storage can be cleared by the browser or user. Export/download portable project files regularly for durable backups.
+
+**Privacy note:** A portable project backup includes the embedded image. Treat `.rastaphi.json` files like the original photo: share them only when you intend to share the source artwork. The v1 format supports PNG, JPEG, WebP, or sanitized SVG. Project files are capped at approximately 44 MB and source SVGs at 2 MB; browser storage capacity varies. This is not an autosave system.
+
 ## R3 / v0.4 SVG Studio
 
 - **Import original SVG files** in addition to PNG, JPEG, and WebP. Source SVG import is capped at **2 MB** and **3,500 supported drawing elements**.
@@ -88,7 +101,9 @@ R1: print-check sheet, one-sheet proof and reprint, source resolution estimates 
 
 R2: measured vector PDF grid, global tile alignment, blank technical grid worksheets (v0.3). Future: native vector-document import, mosaic/stencil workflows, save/load local projects.
 
-R3: safe, limited native SVG import and vector-preserving printable PDFs (v0.4). Future: physical exhibit workflows with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
+R3: safe, limited native SVG import and vector-preserving printable PDFs (v0.4).
+
+R4: local Project Vault and portable backups (v0.5). Future: physical exhibit workflows with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
 
 ## License
 
