@@ -150,7 +150,7 @@ export async function exportPosterPDF({ image, layout, options, includeGuide, se
   const svgHost = renderVector ? document.createElement('div') : null;
   let safeSvgElement: SVGSVGElement | null = null;
   if (svgHost && svgSource) {
-    svgHost.style.cssText = 'position:fixed;left:-200vw;top:0;width:0;height:0;overflow:hidden;pointer-events:none;visibility:hidden;';
+    svgHost.style.cssText = 'position:fixed;left:-200vw;top:0;width:1px;height:1px;overflow:visible;pointer-events:none;';
     safeSvgElement = trustedSvgElement(svgSource.markup);
     svgHost.appendChild(safeSvgElement);
     document.body.appendChild(svgHost);
