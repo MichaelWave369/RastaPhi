@@ -1,8 +1,10 @@
 import { jsPDF } from 'jspdf';
+import 'svg2pdf.js';
 import type { Layout } from './layout';
 import { formatDimension } from './layout';
 import type { ArtOptions } from './render';
 import { createArtCanvas, renderTileCanvas } from './render';
+import { type SafeSvg, trustedSvgElement, vectorFit } from './svg';
 import { type BlueprintOptions, formatPosterCoordinate, gridLinesForTile, GRID_INK_RGB } from './blueprint';
 
 function makeGuide(doc: jsPDF, layout: Layout, opts: ArtOptions) {
@@ -113,10 +115,11 @@ export interface ExportParams {
   includeGuide: boolean;
   selectedIndex?: number;
   blueprint?: BlueprintOptions;
+  svgSource?: SafeSvg | null;
   onProgress: (done: number, total: number) => void;
 }
 
-export async function exportPosterPDF({ image, layout, options, includeGuide, selectedIndex, blueprint, onProgress }: ExportParams): Promise<void> {
+export async function exportPosterPDF({ image, layout, options, includeGuide, selectedIndex, blueprint, svgSource, onProgress }: ExportParams): Promise<void> {
   const tiles = selectedIndex === undefined ? layout.tiles : layout.tiles.filter(tile => tile.index === selectedIndex);
   if (!tiles.length) throw new Error('Selected sheet is no longer in the poster layout.');
   const addGuide = includeGuide && selectedIndex === undefined;
@@ -141,16 +144,45 @@ export async function exportPosterPDF({ image, layout, options, includeGuide, se
     ? createArtCanvas(image, options, 3200)
     : null;
   const dpi = 135;
+  const renderVector = !!svgSource && options.effect === 'original';
+  // SVG can depend on computed DOM style. Attach ONLY our rebuilt allowlisted XML
+  // offscreen for the duration of the export. It contains no links or embedded assets.
+  const svgHost = renderVector ? document.createElement('div') : null;
+  let safeSvgElement: SVGSVGElement | null = null;
+  if (svgHost && svgSource) {
+    svgHost.style.cssText = 'position:fixed;left:-200vw;top:0;width:0;height:0;overflow:hidden;pointer-events:none;visibility:hidden;';
+    safeSvgElement = trustedSvgElement(svgSource.markup);
+    svgHost.appendChild(safeSvgElement);
+    document.body.appendChild(svgHost);
+  }
+  try {
   for (const [tileOffset, tile] of tiles.entries()) {
     if (addGuide || tileOffset > 0) doc.addPage([layout.pageWidth, layout.pageHeight], orientation);
-    const canvas = renderTileCanvas(image, processed, layout, tile, options, dpi);
-    const jpeg = canvas.toDataURL('image/jpeg', .9);
-    doc.addImage(jpeg, 'JPEG',
-      (layout.pageWidth - layout.usableWidth) / 2,
-      (layout.pageHeight - layout.usableHeight) / 2,
-      layout.usableWidth, layout.usableHeight);
     const marginX = (layout.pageWidth - layout.usableWidth) / 2;
     const marginY = (layout.pageHeight - layout.usableHeight) / 2;
+    if (renderVector && safeSvgElement && svgSource) {
+      // All poster positions are in physical inches, including crop, overlap and margins.
+      const fit = vectorFit(svgSource.aspectWidth, svgSource.aspectHeight,
+        options.posterWidth, options.posterHeight, options.fit);
+      doc.saveGraphicsState();
+      doc.rect(marginX, marginY, tile.width, tile.height, null);
+      doc.clip();
+      doc.discardPath();
+      const background = /^#[0-9a-f]{6}$/i.test(options.paperColor) ? options.paperColor : '#ffffff';
+      doc.setFillColor(background);
+      doc.rect(marginX, marginY, tile.width, tile.height, 'F');
+      await doc.svg(safeSvgElement, {
+        x: marginX - tile.x + fit.x,
+        y: marginY - tile.y + fit.y,
+        width: fit.width,
+        height: fit.height,
+      });
+      doc.restoreGraphicsState();
+    } else {
+      const canvas = renderTileCanvas(image, processed, layout, tile, options, dpi);
+      const jpeg = canvas.toDataURL('image/jpeg', .9);
+      doc.addImage(jpeg, 'JPEG', marginX, marginY, layout.usableWidth, layout.usableHeight);
+    }
     if (blueprint) drawBlueprintGrid(doc, layout, tile, marginX, marginY, blueprint);
     doc.setDrawColor(45, 54, 68);
     doc.setLineWidth(.008);
@@ -173,6 +205,9 @@ export async function exportPosterPDF({ image, layout, options, includeGuide, se
     onProgress(tileOffset + 1, tiles.length);
     // Yield between pages: UI remains responsive and progress is visible.
     if (tileOffset % 2 === 1) await new Promise<void>(resolve => setTimeout(resolve, 0));
+  }
+  } finally {
+    svgHost?.remove();
   }
   const suffix = selectedIndex === undefined ? '' : '-sheet-' + selectedIndex;
   doc.save('rastaphi-' + formatDimension(options.posterWidth) + 'x' +
