@@ -73,10 +73,14 @@ export interface ExportParams {
   layout: Layout;
   options: ArtOptions;
   includeGuide: boolean;
+  selectedIndex?: number;
   onProgress: (done: number, total: number) => void;
 }
 
-export async function exportPosterPDF({ image, layout, options, includeGuide, onProgress }: ExportParams): Promise<void> {
+export async function exportPosterPDF({ image, layout, options, includeGuide, selectedIndex, onProgress }: ExportParams): Promise<void> {
+  const tiles = selectedIndex === undefined ? layout.tiles : layout.tiles.filter(tile => tile.index === selectedIndex);
+  if (!tiles.length) throw new Error('Selected sheet is no longer in the poster layout.');
+  const addGuide = includeGuide && selectedIndex === undefined;
   const orientation = layout.pageWidth > layout.pageHeight ? 'landscape' : 'portrait';
   const doc = new jsPDF({
     orientation,
@@ -90,7 +94,7 @@ export async function exportPosterPDF({ image, layout, options, includeGuide, on
     subject: 'Tiled wall artwork with print-at-100-percent assembly information',
     creator: 'RastaPhi',
   });
-  if (includeGuide) makeGuide(doc, layout, options);
+  if (addGuide) makeGuide(doc, layout, options);
 
   // Process global stylized art once, so halftone dots NEVER reset at page seams.
   // Originals and monochrome photos use the full-resolution image instead.
@@ -98,8 +102,8 @@ export async function exportPosterPDF({ image, layout, options, includeGuide, on
     ? createArtCanvas(image, options, 3200)
     : null;
   const dpi = 135;
-  for (const tile of layout.tiles) {
-    if (includeGuide || tile.index > 1) doc.addPage([layout.pageWidth, layout.pageHeight], orientation);
+  for (const [tileOffset, tile] of tiles.entries()) {
+    if (addGuide || tileOffset > 0) doc.addPage([layout.pageWidth, layout.pageHeight], orientation);
     const canvas = renderTileCanvas(image, processed, layout, tile, options, dpi);
     const jpeg = canvas.toDataURL('image/jpeg', .9);
     doc.addImage(jpeg, 'JPEG',
@@ -126,10 +130,11 @@ export async function exportPosterPDF({ image, layout, options, includeGuide, on
     doc.setFontSize(8);
     doc.text('RASTAPHI  /  R' + (tile.row + 1) + ' C' + (tile.col + 1) + '  /  ' +
       tile.index + ' of ' + layout.total, marginX, Math.max(.12, marginY * .52));
-    onProgress(tile.index, layout.total);
+    onProgress(tileOffset + 1, tiles.length);
     // Yield between pages: UI remains responsive and progress is visible.
-    if (tile.index % 2 === 0) await new Promise<void>(resolve => setTimeout(resolve, 0));
+    if (tileOffset % 2 === 1) await new Promise<void>(resolve => setTimeout(resolve, 0));
   }
+  const suffix = selectedIndex === undefined ? '' : '-sheet-' + selectedIndex;
   doc.save('rastaphi-' + formatDimension(options.posterWidth) + 'x' +
-    formatDimension(options.posterHeight) + 'in.pdf');
+    formatDimension(options.posterHeight) + 'in' + suffix + '.pdf');
 }
