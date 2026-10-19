@@ -23,6 +23,9 @@ export interface ProjectSettings {
   guide: boolean;
   grid: boolean;
   blueprint: BlueprintOptions;
+  blankBlueprint: boolean;
+  selectedSheet: number;
+  view: 'wall' | 'map' | 'sheet';
 }
 
 export type ProjectAsset =
@@ -77,7 +80,9 @@ export function validateProject(input: unknown): RastaProject {
     !inList(s.fit, ['cover', 'contain'] as const) ||
     !inList(s.effect, ['original', 'mono', 'halftone', 'duotone'] as const) ||
     !real(s.dotSizeMm, 2, 12) || !hex(s.ink) || !hex(s.paperColor) ||
-    !bool(s.guide) || !bool(s.grid)) {
+    !bool(s.guide) || !bool(s.grid) || !bool(s.blankBlueprint) ||
+    !inList(s.view, ['wall', 'map', 'sheet'] as const) ||
+    !real(s.selectedSheet, 1, 300) || !Number.isInteger(s.selectedSheet)) {
     throw new Error('Project settings are incomplete or outside supported limits.');
   }
   const b = record(s.blueprint);
@@ -87,10 +92,11 @@ export function validateProject(input: unknown): RastaProject {
     throw new Error('Invalid blueprint grid settings.');
   }
   // Reuse the actual print-layout engine as the source of truth.
-  buildLayout({
+  const layout = buildLayout({
     posterWidth: s.posterWidth, posterHeight: s.posterHeight,
     paper: s.paper, orientation: s.orientation, margin: s.margin, overlap: s.overlap,
   });
+  if (s.selectedSheet > layout.total) throw new Error('Saved sheet selection is outside the poster layout.');
   const asset = record(obj.asset);
   if (!named(asset.name, 160)) throw new Error('Project artwork name is invalid.');
   if (asset.kind === 'svg') {
