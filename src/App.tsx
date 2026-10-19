@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Check, ChevronDown, Download, FileImage, Grid2X2,
-  ImagePlus, Layers3, Lock, Maximize2, Palette, Printer, Ruler,
+  ImagePlus, Layers3, Lock, Maximize2, Palette, Printer, Ruler, DraftingCompass,
   ScanLine, ShieldCheck, Sparkles, Unlock, WandSparkles,
 } from 'lucide-react';
 import {
@@ -12,6 +12,7 @@ import { createArtCanvas, makeDemoArt, renderTileCanvas, type ArtOptions } from 
 import { sourcePixelsPerInch, printQualityBand, qualityDescription } from './lib/quality';
 import { exportCalibrationPDF } from './lib/calibration';
 import { exportPosterPDF } from './lib/pdf';
+import { type BlueprintOptions, type GridStep, type GridInk, gridLinesForRegion, GRID_INK_RGB } from './lib/blueprint';
 
 const effectChoices: { value: Effect; label: string; helper: string }[] = [
   { value: 'original', label: 'Original', helper: 'Full color' },
@@ -32,9 +33,32 @@ function Brand() {
       <div className="brand-mark" aria-hidden="true">
         <div className="brand-ring" /><span>Φ</span>
       </div>
-      <div className="brand-word">RASTA<span>PHI</span><sup>®</sup></div>
+      <div className="brand-word">RASTA<span>PHI</span></div>
     </div>
   );
+}
+
+function BlueprintOverlay({
+  originX, originY, width, height, contentWidth, contentHeight, settings,
+}: {
+  originX: number;
+  originY: number;
+  width: number;
+  height: number;
+  contentWidth: number;
+  contentHeight: number;
+  settings: BlueprintOptions;
+}) {
+  if (settings.step === 'off') return null;
+  const lines = gridLinesForRegion(originX, originY, contentWidth, contentHeight, settings.step);
+  const [r, g, b] = GRID_INK_RGB[settings.ink];
+  const color = 'rgb(' + r + ',' + g + ',' + b + ')';
+  return <svg className="blueprint-overlay" viewBox={'0 0 ' + width + ' ' + height} preserveAspectRatio="none" aria-hidden="true">
+    {lines.x.map(x => <line key={'x-' + x} x1={x - originX} y1={0} x2={x - originX} y2={contentHeight}
+      stroke={color} strokeWidth=".034" opacity=".75" />)}
+    {lines.y.map(y => <line key={'y-' + y} x1={0} y1={y - originY} x2={contentWidth} y2={y - originY}
+      stroke={color} strokeWidth=".034" opacity=".75" />)}
+  </svg>;
 }
 
 function App() {
@@ -55,6 +79,8 @@ function App() {
   const [guide, setGuide] = useState(true);
   const [grid, setGrid] = useState(true);
   const [selectedSheet, setSelectedSheet] = useState(1);
+  const [blueprint, setBlueprint] = useState<BlueprintOptions>({ step: 'off', ink: 'cyan', coordinates: true });
+  const [isBlankBlueprint, setIsBlankBlueprint] = useState(false);
   const [view, setView] = useState<'wall' | 'map' | 'sheet'>('wall');
   const [isDragging, setIsDragging] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -84,6 +110,7 @@ function App() {
       URL.revokeObjectURL(url);
       setImage(next);
       setImageName(file.name);
+      setIsBlankBlueprint(false);
       setNotice('');
       if (ratioLocked) setPosterHeight(Number((posterWidth * next.naturalHeight / next.naturalWidth).toFixed(1)));
     };
@@ -92,6 +119,30 @@ function App() {
       setNotice('This image could not be decoded. Try another PNG, JPEG, or WebP.');
     };
     next.src = url;
+  }
+
+  function createBlankBlueprint() {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      setNotice('Unable to create a blank technical sheet in this browser.');
+      return;
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 128, 128);
+    const blank = new Image();
+    blank.onload = () => {
+      setImage(blank);
+      setImageName('Blank blueprint / measurement grid');
+      setIsBlankBlueprint(true);
+      setBlueprint({ step: 'inch', ink: 'cyan', coordinates: true });
+      setEffect('original');
+      setFit('contain');
+      setPaperColor('#ffffff');
+      setNotice('Blank blueprint ready. Choose the grid spacing and finished print size.');
+    };
+    blank.src = canvas.toDataURL('image/png');
   }
 
   function updateWidth(n: number) {
@@ -171,6 +222,7 @@ function App() {
       await exportPosterPDF({
         image, layout, options: artOptions, includeGuide: mode === 'all' && guide,
         selectedIndex: mode === 'sheet' ? currentSheet : undefined,
+        blueprint,
         onProgress: (done, total) => setProgress(Math.round(done / total * 100)),
       });
       setNotice(mode === 'sheet'
@@ -210,7 +262,7 @@ function App() {
 
         <div className="workspace-heading">
           <div className="section-id"><span>01</span><div><strong>THE STUDIO</strong><small>Make something larger than life.</small></div></div>
-          <span className="version-pill"><span /> RASTAPHI R1 · V0.2</span>
+          <span className="version-pill"><span /> RASTAPHI R2 · V0.3</span>
         </div>
 
         <div className="workspace">
@@ -318,6 +370,44 @@ function App() {
                 </div>
               )}
             </section>
+            <section className="setting-card blueprint-card">
+              <div className="section-title"><span>04 / BLUEPRINT LAB</span><DraftingCompass size={18} /></div>
+              <strong className="setting-label">Real-world measurement grid</strong>
+              <p className="helper-text">Vector reference lines line up across every printed sheet. The source image remains raster.</p>
+              <div className="blueprint-fields">
+                <label htmlFor="blueprint-spacing">GRID SPACING</label>
+                <div className="select-wrap">
+                  <select id="blueprint-spacing" value={blueprint.step}
+                    onChange={e => setBlueprint(prev => ({...prev, step: e.target.value as GridStep}))}>
+                    <option value="off">No reference grid</option>
+                    <option value="quarter-inch">1/4 inch</option>
+                    <option value="half-inch">1/2 inch</option>
+                    <option value="inch">1 inch</option>
+                    <option value="centimeter">1 centimeter</option>
+                    <option value="five-centimeters">5 centimeters</option>
+                  </select>
+                  <ChevronDown size={16} />
+                </div>
+                <label htmlFor="blueprint-ink">GRID COLOR</label>
+                <div className="select-wrap">
+                  <select id="blueprint-ink" value={blueprint.ink}
+                    onChange={e => setBlueprint(prev => ({...prev, ink: e.target.value as GridInk}))}>
+                    <option value="cyan">Technical cyan</option>
+                    <option value="slate">Neutral slate</option>
+                  </select>
+                  <ChevronDown size={16} />
+                </div>
+                <label className="guide-toggle blueprint-check">
+                  <input type="checkbox" checked={blueprint.coordinates} disabled={blueprint.step === 'off'}
+                    onChange={e => setBlueprint(prev => ({...prev, coordinates: e.target.checked}))} />
+                  Sheet coordinate labels (PDF)
+                </label>
+              </div>
+              <button type="button" className="outline-button blueprint-blank" onClick={createBlankBlueprint}>
+                <Grid2X2 size={16} /> START BLANK GRID SHEET
+              </button>
+              <p className="helper-text">Grid units describe the printed artwork, not the scale of objects pictured. Verify printed measurements before technical use.</p>
+            </section>
           </aside>
 
           <section className="preview-col" aria-label="Poster preview and export">
@@ -341,6 +431,17 @@ function App() {
                       width: layout.usableWidth / layout.pageWidth * 100 + '%',
                       height: layout.usableHeight / layout.pageHeight * 100 + '%',
                     }} />}
+                    {layout.tiles[currentSheet - 1] && blueprint.step !== 'off' && <div className="proof-grid-layer" style={{
+                      left: (layout.pageWidth - layout.usableWidth) / (2 * layout.pageWidth) * 100 + '%',
+                      top: (layout.pageHeight - layout.usableHeight) / (2 * layout.pageHeight) * 100 + '%',
+                      width: layout.usableWidth / layout.pageWidth * 100 + '%',
+                      height: layout.usableHeight / layout.pageHeight * 100 + '%',
+                    }}>
+                      <BlueprintOverlay originX={layout.tiles[currentSheet - 1].x} originY={layout.tiles[currentSheet - 1].y}
+                        width={layout.usableWidth} height={layout.usableHeight}
+                        contentWidth={layout.tiles[currentSheet - 1].width}
+                        contentHeight={layout.tiles[currentSheet - 1].height} settings={blueprint} />
+                    </div>}
                     <span className="proof-label">R{(layout.tiles[currentSheet - 1]?.row ?? 0) + 1} C{(layout.tiles[currentSheet - 1]?.col ?? 0) + 1} · {currentSheet}/{layout.total}</span>
                   </div>
                   <div className="proof-controls">
@@ -353,6 +454,8 @@ function App() {
               ) : <div className="poster-outer">
                 <div className="poster-board" style={{ aspectRatio: String(posterWidth) + ' / ' + String(posterHeight) }}>
                   {previewUrl ? <img className="art-preview" src={previewUrl} alt="Preview of your poster artwork" /> : <div className="preview-loading">PREPARING THE CANVAS...</div>}
+                  <BlueprintOverlay originX={0} originY={0} width={posterWidth} height={posterHeight}
+                    contentWidth={posterWidth} contentHeight={posterHeight} settings={blueprint} />
                   {layout && (grid || view === 'map') && <div className="tile-overlay" aria-label={layout.total + ' sheet print grid'}>
                     {Array.from({ length: layout.columns - 1 }, (_, i) =>
                       <span key={'c' + i} className="grid-vertical" style={{ left: (i + 1) * layout.stepX / posterWidth * 100 + '%' }} />
@@ -385,8 +488,10 @@ function App() {
             </div>
 
             <div className={'print-quality band-' + qualityBand} aria-live="polite">
-              <div><strong>ARTWORK RESOLUTION</strong><span>{sourcePpi ? sourcePpi + ' SOURCE PPI' : 'NO SOURCE'}</span></div>
-              <p>{qualityDescription(sourcePpi)} The current PDF output samples tiles at approximately 135 PPI. Styled effects can be lower.</p>
+              <div><strong>{isBlankBlueprint ? 'VECTOR REFERENCE GRID' : 'ARTWORK RESOLUTION'}</strong><span>{isBlankBlueprint ? 'BLANK CANVAS' : sourcePpi ? sourcePpi + ' SOURCE PPI' : 'NO SOURCE'}</span></div>
+              <p>{isBlankBlueprint
+                ? 'The reference grid is generated as real PDF vectors, with a blank raster backing. Print at 100% and measure calibration.'
+                : qualityDescription(sourcePpi) + ' The current PDF output samples tiles at approximately 135 PPI. Styled effects can be lower.'}</p>
             </div>
 
             <div className="export-panel">
