@@ -1,8 +1,9 @@
 import { buildLayout, type Effect, type Fit, type Orientation, type Paper } from './layout';
 import type { BlueprintOptions } from './blueprint';
+import { validateMosaic, type MosaicRecipe } from './mosaic';
 
 export const PROJECT_FORMAT = 'rastaphi-project';
-export const PROJECT_VERSION = 1;
+export const PROJECT_VERSION = 2;
 export const MAX_PROJECT_BYTES = 44 * 1024 * 1024;
 export const MAX_RASTER_DATA_URL_LENGTH = 42 * 1024 * 1024;
 export const MAX_SVG_MARKUP_LENGTH = 3 * 1024 * 1024;
@@ -30,7 +31,8 @@ export interface ProjectSettings {
 
 export type ProjectAsset =
   | { kind: 'raster'; name: string; dataUrl: string }
-  | { kind: 'svg'; name: string; markup: string };
+  | { kind: 'svg'; name: string; markup: string }
+  | MosaicRecipe;
 
 export interface RastaProject {
   format: typeof PROJECT_FORMAT;
@@ -64,8 +66,8 @@ function named(value: unknown, maxLength: number): value is string {
 
 export function validateProject(input: unknown): RastaProject {
   const obj = record(input);
-  if (obj.format !== PROJECT_FORMAT || obj.version !== PROJECT_VERSION) {
-    throw new Error('Unsupported project format or version. This version of RastaPhi opens v1 projects.');
+  if (obj.format !== PROJECT_FORMAT || (obj.version !== 1 && obj.version !== PROJECT_VERSION)) {
+    throw new Error('Unsupported project format or version. RastaPhi opens v1 and v2 projects.');
   }
   if (!named(obj.title, 100) || typeof obj.savedAt !== 'string' ||
     !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/.test(obj.savedAt) ||
@@ -102,6 +104,8 @@ export function validateProject(input: unknown): RastaProject {
   if (asset.kind === 'svg') {
     if (typeof asset.markup !== 'string' || asset.markup.length > MAX_SVG_MARKUP_LENGTH ||
       !asset.markup.includes('<svg')) throw new Error('SVG artwork is missing or exceeds the project limit.');
+  } else if (asset.kind === 'mosaic' && obj.version === PROJECT_VERSION) {
+    validateMosaic(asset);
   } else if (asset.kind === 'raster') {
     if (typeof asset.dataUrl !== 'string' ||
       asset.dataUrl.length > MAX_RASTER_DATA_URL_LENGTH ||
@@ -111,7 +115,9 @@ export function validateProject(input: unknown): RastaProject {
   } else {
     throw new Error('Project artwork type is not supported.');
   }
-  return input as RastaProject;
+  // Old v1 raster/SVG projects are upgraded in-memory, without rewriting the original file.
+  // A newly exported backup uses the current v2 format.
+  return { ...obj, version: PROJECT_VERSION } as unknown as RastaProject;
 }
 
 export function parseProjectJSON(text: string): RastaProject {
