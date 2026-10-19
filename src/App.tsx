@@ -216,7 +216,13 @@ function App() {
     return () => { cancelled = true; };
   }, [mosaicSource, posterWidth, posterHeight]);
 
+  function updateMosaic(next: MosaicRecipe | null) {
+    setMosaicProcessing(!!next);
+    setMosaicSource(next);
+  }
+
   function flattenMosaic() {
+    setMosaicProcessing(false);
     setMosaicSource(null);
     setImageName('Flattened MosaicLab collage');
     setNotice('Collage flattened to a printable image. Your editable photo arrangement is no longer active: save an editable project before flattening next time.');
@@ -338,6 +344,7 @@ function App() {
     setImage(loaded.image);
     setImageName(valid.asset.name);
     setSvgSource(loaded.svg);
+    setMosaicProcessing(!!loaded.mosaic);
     setMosaicSource(loaded.mosaic);
     setOriginalRasterFile(null);
     setProjectTitle(valid.title);
@@ -539,7 +546,7 @@ function App() {
               </button>
               <p className="helper-text">Grid units describe the printed artwork, not the scale of objects pictured. Verify printed measurements before technical use.</p>
             </section>
-            <MosaicLab recipe={mosaicSource} onChange={setMosaicSource} flatten={flattenMosaic} />
+            <MosaicLab recipe={mosaicSource} onChange={updateMosaic} flatten={flattenMosaic} processing={mosaicProcessing} />
             <ProjectVault title={projectTitle} setTitle={setProjectTitle}
               snapshot={snapshotProject} restore={restoreProject} />
           </aside>
