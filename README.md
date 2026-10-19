@@ -6,6 +6,17 @@ RastaPhi is an original, MIT-licensed, local-first wall-art and large-format pos
 
 **Live site after GitHub Pages is enabled:** https://michaelwave369.github.io/RastaPhi/
 
+## R2 / v0.3 Blueprint Lab
+
+- **Measured reference grids** over artwork: 1/4 inch, 1/2 inch, 1 inch, 1 cm, or 5 cm.
+- **Global, seam-aligned grid:** grid placement uses the poster origin rather than resetting at page boundaries, so lines align even through overlap.
+- **Vector grid inside PDF:** technical grid lines are drawn with PDF vector commands, while source artwork remains rasterized.
+- **Grid colors** (cyan or slate), with optional printable global page-coordinate labels.
+- **Blank grid worksheets:** choose *Start Blank Grid Sheet* without supplying an image, then set actual dimensions and print a reference template.
+- **Live wall and sheet previews** include the same global grid layout. Export entire posters or single replacement sheets with identical grid positioning.
+
+**Scale caution:** The reference grid measures *the final paper/poster*, NOT the size of objects in an imported schematic. A raster drawing's real-world scale is unknown unless you independently establish it and set matching print dimensions. This release does not vectorize raster artwork or certify engineering/architectural scale. Physical output must be calibrated on each printer at **Actual Size / 100%**.
+
 ## R1 / v0.2 print-proof tools
 
 - **Dedicated printer calibration PDF**: measure a 1-inch square, a 50 mm square, and 5-inch ruler before committing an entire poster to ink.
@@ -65,7 +76,7 @@ The Vite base is set to `/RastaPhi/`, which prevents asset path 404 errors on Gi
 
 R1: print-check sheet, one-sheet proof and reprint, source resolution estimates (v0.2). Future: alignment refinements, efficient giant-poster exports, more print modes.
 
-R2: Blueprint mode, vector documents, mosaic and stencil workflows, save/load local projects.
+R2: measured vector PDF grid, global tile alignment, blank technical grid worksheets (v0.3). Future: native vector-document import, mosaic/stencil workflows, save/load local projects.
 
 R3: physical exhibit workflows with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
 

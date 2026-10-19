@@ -3,6 +3,7 @@ import type { Layout } from './layout';
 import { formatDimension } from './layout';
 import type { ArtOptions } from './render';
 import { createArtCanvas, renderTileCanvas } from './render';
+import { type BlueprintOptions, formatPosterCoordinate, gridLinesForTile, GRID_INK_RGB } from './blueprint';
 
 function makeGuide(doc: jsPDF, layout: Layout, opts: ArtOptions) {
   const pw = layout.pageWidth;
@@ -68,16 +69,54 @@ function makeGuide(doc: jsPDF, layout: Layout, opts: ArtOptions) {
   doc.text('Made locally in your browser. No uploads.  rastaphi', x, ph - .12);
 }
 
+function drawBlueprintGrid(
+  doc: jsPDF,
+  layout: Layout,
+  tile: Layout['tiles'][number],
+  marginX: number,
+  marginY: number,
+  blueprint: BlueprintOptions,
+): void {
+  if (blueprint.step === 'off') return;
+  const lines = gridLinesForTile(tile, blueprint.step);
+  const [r, g, b] = GRID_INK_RGB[blueprint.ink];
+  // Draw physical grid lines as PDF VECTORS; artwork beneath remains raster.
+  doc.setDrawColor(r, g, b);
+  doc.setLineWidth(.007);
+  for (const x of lines.x) {
+    const local = marginX + x - tile.x;
+    doc.line(local, marginY, local, marginY + tile.height);
+  }
+  for (const y of lines.y) {
+    const local = marginY + y - tile.y;
+    doc.line(marginX, local, marginX + tile.width, local);
+  }
+
+  if (blueprint.coordinates) {
+    const xStart = formatPosterCoordinate(tile.x, blueprint.step);
+    const xEnd = formatPosterCoordinate(tile.x + tile.width, blueprint.step);
+    const yStart = formatPosterCoordinate(tile.y, blueprint.step);
+    const yEnd = formatPosterCoordinate(tile.y + tile.height, blueprint.step);
+    doc.setTextColor(48, 61, 73);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    const footerY = layout.pageHeight - Math.max(.12, marginY * .4);
+    doc.text('GRID ORIGIN: TOP-LEFT   X ' + xStart + ' to ' + xEnd +
+      '   |   Y ' + yStart + ' to ' + yEnd, marginX, footerY);
+  }
+}
+
 export interface ExportParams {
   image: HTMLImageElement;
   layout: Layout;
   options: ArtOptions;
   includeGuide: boolean;
   selectedIndex?: number;
+  blueprint?: BlueprintOptions;
   onProgress: (done: number, total: number) => void;
 }
 
-export async function exportPosterPDF({ image, layout, options, includeGuide, selectedIndex, onProgress }: ExportParams): Promise<void> {
+export async function exportPosterPDF({ image, layout, options, includeGuide, selectedIndex, blueprint, onProgress }: ExportParams): Promise<void> {
   const tiles = selectedIndex === undefined ? layout.tiles : layout.tiles.filter(tile => tile.index === selectedIndex);
   if (!tiles.length) throw new Error('Selected sheet is no longer in the poster layout.');
   const addGuide = includeGuide && selectedIndex === undefined;
@@ -112,6 +151,7 @@ export async function exportPosterPDF({ image, layout, options, includeGuide, se
       layout.usableWidth, layout.usableHeight);
     const marginX = (layout.pageWidth - layout.usableWidth) / 2;
     const marginY = (layout.pageHeight - layout.usableHeight) / 2;
+    if (blueprint) drawBlueprintGrid(doc, layout, tile, marginX, marginY, blueprint);
     doc.setDrawColor(45, 54, 68);
     doc.setLineWidth(.008);
     const mark = .14;
