@@ -207,5 +207,5 @@ export function sanitizeSvg(input: string): SafeSvg {
  */
 export function trustedSvgElement(markup: string): SVGSVGElement {
   const documentSvg = new DOMParser().parseFromString(markup, 'image/svg+xml');
-  return document.importNode(documentSvg.documentElement, true) as SVGSVGElement;
+  return document.importNode(documentSvg.documentElement, true) as unknown as SVGSVGElement;
 }
