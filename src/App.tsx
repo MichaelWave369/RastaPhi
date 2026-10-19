@@ -341,7 +341,7 @@ function App() {
                       width: layout.usableWidth / layout.pageWidth * 100 + '%',
                       height: layout.usableHeight / layout.pageHeight * 100 + '%',
                     }} />}
-                    <span className="proof-label">R{layout.tiles[currentSheet - 1]?.row + 1} C{layout.tiles[currentSheet - 1]?.col + 1} · {currentSheet}/{layout.total}</span>
+                    <span className="proof-label">R{(layout.tiles[currentSheet - 1]?.row ?? 0) + 1} C{(layout.tiles[currentSheet - 1]?.col ?? 0) + 1} · {currentSheet}/{layout.total}</span>
                   </div>
                   <div className="proof-controls">
                     <button type="button" onClick={() => setSelectedSheet(Math.max(1, currentSheet - 1))} disabled={currentSheet === 1} aria-label="Previous sheet"><ArrowLeft size={18} /></button>
