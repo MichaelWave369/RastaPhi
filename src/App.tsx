@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowRight, Check, ChevronDown, Download, FileImage, Grid2X2,
+  ArrowLeft, ArrowRight, Check, ChevronDown, Download, FileImage, Grid2X2,
   ImagePlus, Layers3, Lock, Maximize2, Palette, Printer, Ruler,
   ScanLine, ShieldCheck, Sparkles, Unlock, WandSparkles,
 } from 'lucide-react';
@@ -8,7 +8,9 @@ import {
   buildLayout, formatDimension, inchesToCm, type Effect, type Fit,
   type Orientation, type Paper,
 } from './lib/layout';
-import { createArtCanvas, makeDemoArt, type ArtOptions } from './lib/render';
+import { createArtCanvas, makeDemoArt, renderTileCanvas, type ArtOptions } from './lib/render';
+import { sourcePixelsPerInch, printQualityBand, qualityDescription } from './lib/quality';
+import { exportCalibrationPDF } from './lib/calibration';
 import { exportPosterPDF } from './lib/pdf';
 
 const effectChoices: { value: Effect; label: string; helper: string }[] = [
@@ -52,7 +54,8 @@ function App() {
   const [paperColor, setPaperColor] = useState('#f8eed9');
   const [guide, setGuide] = useState(true);
   const [grid, setGrid] = useState(true);
-  const [view, setView] = useState<'wall' | 'map'>('wall');
+  const [selectedSheet, setSelectedSheet] = useState(1);
+  const [view, setView] = useState<'wall' | 'map' | 'sheet'>('wall');
   const [isDragging, setIsDragging] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -129,9 +132,36 @@ function App() {
     }
   }, [image, artOptions]);
 
-  async function doExport() {
+  const currentSheet = Math.min(Math.max(1, selectedSheet), layout?.total ?? 1);
+  const sourcePpi = image ? Math.round(sourcePixelsPerInch(
+    image.naturalWidth, image.naturalHeight, posterWidth, posterHeight, fit,
+  )) : 0;
+  const qualityBand = printQualityBand(sourcePpi);
+
+  const sheetPreviewUrl = useMemo(() => {
+    if (!image || !layout || view !== 'sheet') return '';
+    try {
+      const tile = layout.tiles[currentSheet - 1];
+      if (!tile) return '';
+      const processed = effect === 'duotone' || effect === 'halftone'
+        ? createArtCanvas(image, artOptions, 1150) : null;
+      return renderTileCanvas(image, processed, layout, tile, artOptions, 65).toDataURL('image/jpeg', .88);
+    } catch { return ''; }
+  }, [image, layout, currentSheet, view, artOptions, effect]);
+
+  function doCalibration() {
+    if (!layout) return;
+    try {
+      exportCalibrationPDF(layout);
+      setNotice('Calibration sheet saved. Print it at Actual Size / 100%, then measure both squares and the ruler.');
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'Unable to export printer test sheet.');
+    }
+  }
+
+  async function doExport(mode: 'all' | 'sheet' = 'all') {
     if (!image || !layout || exporting) return;
-    if (layout.total > 48 && !window.confirm(
+    if (mode === 'all' && layout.total > 48 && !window.confirm(
       'This poster uses ' + layout.total + ' sheets. The PDF may be large. Continue?'
     )) return;
     setExporting(true);
@@ -139,10 +169,13 @@ function App() {
     setNotice('');
     try {
       await exportPosterPDF({
-        image, layout, options: artOptions, includeGuide: guide,
+        image, layout, options: artOptions, includeGuide: mode === 'all' && guide,
+        selectedIndex: mode === 'sheet' ? currentSheet : undefined,
         onProgress: (done, total) => setProgress(Math.round(done / total * 100)),
       });
-      setNotice('Your print-ready PDF has been generated. Print at 100% / Actual Size!');
+      setNotice(mode === 'sheet'
+        ? 'Sheet ' + currentSheet + ' has been exported for reprinting at 100% / Actual Size.'
+        : 'Your print-ready PDF has been generated. Print at 100% / Actual Size!');
     } catch (err) {
       setNotice(err instanceof Error ? err.message : 'Could not export this poster. Try a smaller size.');
     } finally {
@@ -177,7 +210,7 @@ function App() {
 
         <div className="workspace-heading">
           <div className="section-id"><span>01</span><div><strong>THE STUDIO</strong><small>Make something larger than life.</small></div></div>
-          <span className="version-pill"><span /> RASTAPHI R0 · V0.1</span>
+          <span className="version-pill"><span /> RASTAPHI R1 · V0.2</span>
         </div>
 
         <div className="workspace">
@@ -293,12 +326,31 @@ function App() {
               <div className="preview-tabs">
                 <button type="button" className={view === 'wall' ? 'active' : ''} onClick={() => setView('wall')}>WALL VIEW</button>
                 <button type="button" className={view === 'map' ? 'active' : ''} onClick={() => setView('map')}>SHEET MAP</button>
+                <button type="button" className={view === 'sheet' ? 'active' : ''} onClick={() => setView('sheet')}>PRINT PROOF</button>
               </div>
             </div>
-            <div className={'wall-stage ' + (view === 'map' ? 'map-mode' : '')}>
+            <div className={'wall-stage ' + (view === 'map' ? 'map-mode' : '') + (view === 'sheet' ? ' proof-mode' : '')}>
               <div className="wall-grain" />
-              <div className="wall-topline">R / P — YOUR WALL, REIMAGINED</div>
-              <div className="poster-outer">
+              <div className="wall-topline">{view === 'sheet' ? 'R / P — ONE PAGE AT A TIME' : 'R / P — YOUR WALL, REIMAGINED'}</div>
+              {view === 'sheet' && layout ? (
+                <div className="proof-wrap">
+                  <div className="proof-page" style={{ aspectRatio: String(layout.pageWidth) + ' / ' + String(layout.pageHeight) }}>
+                    {sheetPreviewUrl && <img src={sheetPreviewUrl} alt={'Print proof for sheet ' + currentSheet} style={{
+                      left: (layout.pageWidth - layout.usableWidth) / (2 * layout.pageWidth) * 100 + '%',
+                      top: (layout.pageHeight - layout.usableHeight) / (2 * layout.pageHeight) * 100 + '%',
+                      width: layout.usableWidth / layout.pageWidth * 100 + '%',
+                      height: layout.usableHeight / layout.pageHeight * 100 + '%',
+                    }} />}
+                    <span className="proof-label">R{layout.tiles[currentSheet - 1]?.row + 1} C{layout.tiles[currentSheet - 1]?.col + 1} · {currentSheet}/{layout.total}</span>
+                  </div>
+                  <div className="proof-controls">
+                    <button type="button" onClick={() => setSelectedSheet(Math.max(1, currentSheet - 1))} disabled={currentSheet === 1} aria-label="Previous sheet"><ArrowLeft size={18} /></button>
+                    <span>SHEET <strong>{currentSheet}</strong> OF {layout.total}</span>
+                    <button type="button" onClick={() => setSelectedSheet(Math.min(layout.total, currentSheet + 1))} disabled={currentSheet === layout.total} aria-label="Next sheet"><ArrowRight size={18} /></button>
+                  </div>
+                  <small>Approximate proof. Exported PDFs preserve physical dimensions.</small>
+                </div>
+              ) : <div className="poster-outer">
                 <div className="poster-board" style={{ aspectRatio: String(posterWidth) + ' / ' + String(posterHeight) }}>
                   {previewUrl ? <img className="art-preview" src={previewUrl} alt="Preview of your poster artwork" /> : <div className="preview-loading">PREPARING THE CANVAS...</div>}
                   {layout && (grid || view === 'map') && <div className="tile-overlay" aria-label={layout.total + ' sheet print grid'}>
@@ -317,8 +369,8 @@ function App() {
                   </div>}
                   <span className="tape tape-left" /><span className="tape tape-right" />
                 </div>
-              </div>
-              <div className="wall-bottomline"><span>←  REAL-WORLD SCALE PREVIEW  →</span><strong>{dimString} IN</strong></div>
+              </div>}
+              <div className="wall-bottomline"><span>{view === 'sheet' ? '←  ONE PRINTABLE SHEET  →' : '←  REAL-WORLD SCALE PREVIEW  →'}</span><strong>{view === 'sheet' ? layout?.pageWidth.toFixed(1) + ' × ' + layout?.pageHeight.toFixed(1) : dimString} IN</strong></div>
             </div>
 
             <div className="grid-toggle-row">
@@ -332,15 +384,28 @@ function App() {
               <div className="spec"><Layers3 size={19} /><span>WALL COVERAGE</span><strong>{formatDimension(area)}<sub> FT²</sub></strong><small>Made from everyday paper</small></div>
             </div>
 
+            <div className={'print-quality band-' + qualityBand} aria-live="polite">
+              <div><strong>ARTWORK RESOLUTION</strong><span>{sourcePpi ? sourcePpi + ' SOURCE PPI' : 'NO SOURCE'}</span></div>
+              <p>{qualityDescription(sourcePpi)} The current PDF output samples tiles at approximately 135 PPI. Styled effects can be lower.</p>
+            </div>
+
             <div className="export-panel">
               <div className="export-info">
                 <div className="export-icon"><Printer size={24} /></div>
                 <div><strong>Ready to make it real?</strong><p>Every page in the right place. No paid tools, no uploads, no nonsense.</p></div>
               </div>
+              <div className="print-tools">
+                <button type="button" className="proof-action" onClick={doCalibration} disabled={!layout || exporting}><Ruler size={17} /> DOWNLOAD 1-PAGE PRINT CHECK</button>
+                <div className="reprint-row">
+                  <label htmlFor="reprintSheet">REPRINT SHEET</label>
+                  <input id="reprintSheet" aria-label="Sheet to reprint" type="number" min={1} max={layout?.total ?? 1} value={currentSheet} onChange={e => { const n = Number(e.target.value); if (Number.isFinite(n) && n >= 1) setSelectedSheet(Math.min(layout?.total ?? 1, Math.floor(n))); }} />
+                  <button type="button" className="proof-action reprint-action" onClick={() => doExport('sheet')} disabled={!image || !layout || exporting}>EXPORT THIS SHEET</button>
+                </div>
+              </div>
               <label className="guide-toggle"><input type="checkbox" checked={guide} onChange={e => setGuide(e.target.checked)} /><span>Include assembly guide & 1-inch calibration square</span></label>
               {layoutState.error && <p className="error-message" role="alert">{layoutState.error}</p>}
               {notice && <p className="status-message" role="status">{notice}</p>}
-              <button type="button" className="export-button" disabled={!image || !layout || exporting} onClick={doExport}>
+              <button type="button" className="export-button" disabled={!image || !layout || exporting} onClick={() => doExport('all')}>
                 {exporting ? <><span className="small-spinner" /> CREATING PDF... {progress}%</> :
                   <><Download size={20} /> EXPORT PRINT-READY PDF <ArrowRight size={19} /></>}
               </button>
