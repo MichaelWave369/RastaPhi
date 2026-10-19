@@ -18,6 +18,7 @@ function fixture(): RastaProject {
       fit: 'contain', effect: 'halftone', dotSizeMm: 4,
       ink: '#123456', paperColor: '#f8eed9', guide: true, grid: false,
       blueprint: { step: 'inch', ink: 'cyan', coordinates: true },
+      blankBlueprint: false, selectedSheet: 2, view: 'sheet',
     },
   };
 }
