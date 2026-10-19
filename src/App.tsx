@@ -12,6 +12,7 @@ import { createArtCanvas, makeDemoArt, renderTileCanvas, type ArtOptions } from 
 import { sourcePixelsPerInch, printQualityBand, qualityDescription } from './lib/quality';
 import { exportCalibrationPDF } from './lib/calibration';
 import { exportPosterPDF } from './lib/pdf';
+import { sanitizeSvg, SVG_SIZE_LIMIT, type SafeSvg } from './lib/svg';
 import { type BlueprintOptions, type GridStep, type GridInk, gridLinesForRegion, GRID_INK_RGB } from './lib/blueprint';
 
 const effectChoices: { value: Effect; label: string; helper: string }[] = [
@@ -64,6 +65,7 @@ function BlueprintOverlay({
 function App() {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [imageName, setImageName] = useState('RastaPhi demo artwork');
+  const [svgSource, setSvgSource] = useState<SafeSvg | null>(null);
   const [posterWidth, setPosterWidth] = useState(24);
   const [posterHeight, setPosterHeight] = useState(36);
   const [ratioLocked, setRatioLocked] = useState(false);
@@ -94,9 +96,42 @@ function App() {
     demo.src = makeDemoArt();
   }, []);
 
-  function loadFile(file?: File) {
+  async function loadFile(file?: File) {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+    if (isSvg) {
+      if (file.size > SVG_SIZE_LIMIT) {
+        setNotice('SVG artwork must be smaller than 2 MB for safe vector importing.');
+        return;
+      }
+      try {
+        const safe = sanitizeSvg(await file.text());
+        const url = URL.createObjectURL(new Blob([safe.markup], { type: 'image/svg+xml' }));
+        const vectorImage = new Image();
+        vectorImage.onload = () => {
+          URL.revokeObjectURL(url);
+          setImage(vectorImage);
+          setSvgSource(safe);
+          setImageName(file.name);
+          setIsBlankBlueprint(false);
+          setEffect('original');
+          setFit('contain');
+          setNotice('Imported ' + safe.shapes + ' vector shapes.' +
+            (safe.removedElements ? ' Removed ' + safe.removedElements + ' unsupported or unsafe SVG elements.' : '') +
+            ' Original treatment preserves the supported shapes as PDF vectors.');
+          if (ratioLocked) setPosterHeight(Number((posterWidth * safe.aspectHeight / safe.aspectWidth).toFixed(1)));
+        };
+        vectorImage.onerror = () => {
+          URL.revokeObjectURL(url);
+          setNotice('The safe SVG could not be previewed. Try a simpler drawing.');
+        };
+        vectorImage.src = url;
+      } catch (err) {
+        setNotice(err instanceof Error ? err.message : 'Unable to import SVG.');
+      }
+      return;
+    }
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
       setNotice('Please choose a PNG, JPEG, or WebP image.');
       return;
     }
@@ -109,6 +144,7 @@ function App() {
     next.onload = () => {
       URL.revokeObjectURL(url);
       setImage(next);
+      setSvgSource(null);
       setImageName(file.name);
       setIsBlankBlueprint(false);
       setNotice('');
@@ -134,6 +170,7 @@ function App() {
     const blank = new Image();
     blank.onload = () => {
       setImage(blank);
+      setSvgSource(null);
       setImageName('Blank blueprint / measurement grid');
       setIsBlankBlueprint(true);
       setBlueprint({ step: 'inch', ink: 'cyan', coordinates: true });
@@ -187,7 +224,7 @@ function App() {
   const sourcePpi = image ? Math.round(sourcePixelsPerInch(
     image.naturalWidth, image.naturalHeight, posterWidth, posterHeight, fit,
   )) : 0;
-  const qualityBand = printQualityBand(sourcePpi);
+  const qualityBand = svgSource ? 'good' : printQualityBand(sourcePpi);
 
   const sheetPreviewUrl = useMemo(() => {
     if (!image || !layout || view !== 'sheet') return '';
@@ -223,6 +260,7 @@ function App() {
         image, layout, options: artOptions, includeGuide: mode === 'all' && guide,
         selectedIndex: mode === 'sheet' ? currentSheet : undefined,
         blueprint,
+        svgSource,
         onProgress: (done, total) => setProgress(Math.round(done / total * 100)),
       });
       setNotice(mode === 'sheet'
@@ -262,7 +300,7 @@ function App() {
 
         <div className="workspace-heading">
           <div className="section-id"><span>01</span><div><strong>THE STUDIO</strong><small>Make something larger than life.</small></div></div>
-          <span className="version-pill"><span /> RASTAPHI R2 · V0.3</span>
+          <span className="version-pill"><span /> RASTAPHI R3 · V0.4</span>
         </div>
 
         <div className="workspace">
@@ -279,18 +317,22 @@ function App() {
                   ref={fileRef}
                   className="visually-hidden"
                   type="file"
-                  accept="image/png,image/jpeg,image/webp"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg"
                   aria-label="Choose artwork image"
                   onChange={e => { loadFile(e.target.files?.[0]); e.target.value = ''; }}
                 />
                 <div className="upload-symbol"><FileImage size={24} /></div>
                 <strong>Drop your masterpiece here.</strong>
-                <p>PNG, JPG or WebP. Maximum 30 MB.</p>
+                <p>PNG, JPG, WebP (30 MB) or safe SVG (2 MB).</p>
                 <button type="button" className="outline-button" onClick={() => fileRef.current?.click()}>
                   <ImagePlus size={15} /> CHOOSE IMAGE
                 </button>
               </div>
               <div className="file-indicator"><div className="file-dot" /><span title={imageName}>{imageName}</span><Check size={15} /></div>
+              {svgSource && <div className="svg-source-banner"><strong>SVG VECTORS READY</strong>
+                <span>{svgSource.shapes} supported shapes · {svgSource.removedElements} elements removed</span>
+                <small>{effect === 'original' ? 'Vector PDF export active' : 'Effect applied: PDF will use rasterized artwork'}</small>
+              </div>}
             </section>
 
             <section className="setting-card">
@@ -488,8 +530,13 @@ function App() {
             </div>
 
             <div className={'print-quality band-' + qualityBand} aria-live="polite">
-              <div><strong>{isBlankBlueprint ? 'VECTOR REFERENCE GRID' : 'ARTWORK RESOLUTION'}</strong><span>{isBlankBlueprint ? 'BLANK CANVAS' : sourcePpi ? sourcePpi + ' SOURCE PPI' : 'NO SOURCE'}</span></div>
-              <p>{isBlankBlueprint
+              <div><strong>{svgSource ? 'VECTOR ARTWORK' : isBlankBlueprint ? 'VECTOR REFERENCE GRID' : 'ARTWORK RESOLUTION'}</strong>
+                <span>{svgSource ? (effect === 'original' ? 'VECTOR PDF' : 'RASTER EFFECT') : isBlankBlueprint ? 'BLANK CANVAS' : sourcePpi ? sourcePpi + ' SOURCE PPI' : 'NO SOURCE'}</span></div>
+              <p>{svgSource
+                ? (effect === 'original'
+                  ? 'Supported SVG geometry stays vector in PDF export, including across sheets. Text may use substitute PDF fonts.'
+                  : 'An art effect is selected, so the SVG is rasterized for this export. Choose Original to keep vector geometry.')
+                : isBlankBlueprint
                 ? 'The reference grid is generated as real PDF vectors, with a blank raster backing. Print at 100% and measure calibration.'
                 : qualityDescription(sourcePpi) + ' The current PDF output samples tiles at approximately 135 PPI. Styled effects can be lower.'}</p>
             </div>

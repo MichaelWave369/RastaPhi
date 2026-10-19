@@ -369,3 +369,14 @@ footer a { display: flex; align-items: center; gap: 8px; color: #e9c382; font-si
 .blueprint-overlay { pointer-events: none; display: block; position: absolute; z-index: 2; inset: 0; height: 100%; width: 100%; }
 .proof-grid-layer { position: absolute; z-index: 2; pointer-events: none; }
 .proof-grid-layer .blueprint-overlay { width: 100%; height: 100%; }
+
+
+/* R3 SVG source status */
+.svg-source-banner {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 15px;
+  padding: 12px 14px; border: 1px solid #567863;
+  border-left: 3px solid #acdc96; border-radius: 5px; background: #20332b;
+}
+.svg-source-banner strong { font-size: 10px; letter-spacing: .08em; color: #d0efae; }
+.svg-source-banner span { font-size: 11px; font-weight: 750; color: #e1eadc; }
+.svg-source-banner small { font-size: 10px; line-height: 1.4; color: #abc3af; }
