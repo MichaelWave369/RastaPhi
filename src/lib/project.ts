@@ -1,5 +1,5 @@
 import { buildLayout, type Effect, type Fit, type Orientation, type Paper } from './layout';
-import type { GridInk, GridStep, BlueprintOptions } from './blueprint';
+import type { BlueprintOptions } from './blueprint';
 
 export const PROJECT_FORMAT = 'rastaphi-project';
 export const PROJECT_VERSION = 1;
