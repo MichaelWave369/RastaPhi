@@ -6,6 +6,29 @@ RastaPhi is an original, MIT-licensed, local-first wall-art and large-format pos
 
 **Live site after GitHub Pages is enabled:** https://michaelwave369.github.io/RastaPhi/
 
+## R7 / v0.8 Exhibit Kit
+
+Take a Gallery Composer exhibition off the screen with a matching set of physical display materials.
+
+- **Download Exhibit Kit PDF** from an enabled Gallery Composer. The first page is an exhibition entrance/title card. Remaining pages contain **two removable artwork placards per sheet** (cut along the frames), sized for the selected printer paper.
+- **Titles and credits remain PDF text.** Unlike the mosaic artwork, these separate placards are not baked into the same raster image.
+- **Offline QR codes:** when gallery QR links are enabled, codes are generated at about 1.55 inches wide using the local `qrcode` library. Each PDF QR image also has a clickable link annotation. QR codes are not added if the photo lacks an HTTPS link.
+- **Photo-free manifest export:** download a versioned `*-manifest.json` with exhibition title, subtitle, piece order, source file names, titles, credits, and HTTPS links, but **no images or embedded image pixels**.
+- **No new project format:** Exhibit Kit reads directly from Gallery Composer metadata already preserved in the Project Vault v2 format. Existing v1/v2 projects continue to load.
+- **Independent exports:** generating placards does not change the current poster design or its print-sheet PDF. You can print both the exhibition wall and its signs.
+
+### Exhibit Kit print checklist
+
+1. Add photos to MosaicLab, enable Gallery Composer, and enter the artwork title, artist and optional HTTPS destination for each piece.
+2. Download the **Exhibit Kit PDF**. If needed, also download the photo-free exhibit manifest.
+3. Print the PDF at **Actual Size / 100%**. Run a calibration sheet before using expensive paper.
+4. Trim and mount placards, then physically test every printed QR code with a phone before your show opens.
+5. Keep a portable Project Vault file to preserve editable photos and captions. Manifest JSON is metadata only, **not** a substitute for the project backup.
+
+**Privacy:** The manifest includes source filenames, credits and any supplied URLs, which may themselves contain personal information; it simply omits the image data. No remote URLs are fetched to create the PDF or the manifest. Images are still processed locally.
+
+**Limitations:** PDF codes are raster PNGs at sufficiently high generation resolution, not vector QR modules; PDF viewer/printer scaling still affects scanability. There is no automated physical print verification.
+
 ## R6 / v0.7 Gallery Composer
 
 Turn editable MosaicLab collages into coordinated exhibition walls.
@@ -139,7 +162,9 @@ R4: local Project Vault and portable backups (v0.5).
 
 R5: MosaicLab editable photo grids with v1-to-v2 project migration (v0.6).
 
-R6: Gallery Composer exhibition titles, artwork credits, and local QR labels (v0.7). Future: more physical exhibit workflows with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
+R6: Gallery Composer exhibition titles, artwork credits, and local QR labels (v0.7).
+
+R7: Exhibit Kit entrance card, placard PDF, and photo-free catalog manifest (v0.8). Future: project bridges with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
 
 ## License
 
