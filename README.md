@@ -6,6 +6,26 @@ RastaPhi is an original, MIT-licensed, local-first wall-art and large-format pos
 
 **Live site after GitHub Pages is enabled:** https://michaelwave369.github.io/RastaPhi/
 
+## R6 / v0.7 Gallery Composer
+
+Turn editable MosaicLab collages into coordinated exhibition walls.
+
+- **Exhibition header:** give your wall a title and subtitle, with a dedicated display area above the panel grid.
+- **Artwork labels:** add a printed title and artist/credit for every panel. Labels stay attached to their photo when you reorder the collage.
+- **Optional QR codes:** attach a complete HTTPS artwork link to each panel. QR images are generated inside your browser using the open-source `qrcode` library. RastaPhi does **not** visit or upload the link.
+- **Scannability guard:** for small panels, QR images are omitted rather than printed at impractically small sizes. Increase finished poster size or reduce the number of columns/rows. **Print and physically scan every code before mounting an exhibition.**
+- **Project Vault compatible:** Gallery Composer settings and photo labels are optional properties on the existing v2 MosaicLab project format. Older v1 and v2 projects without gallery metadata still open and render normally.
+- **Printing:** all gallery content is currently composed into a rasterized poster image, then tiled by the existing PDF engine. Blueprint grid overlays remain vector. Labels and QR codes are not separate vector PDF layers yet.
+- **Local-first:** photo pixels and URLs stay on your device unless you intentionally export/share a project file or a printed QR code. Portable projects include your image sources and entered links.
+
+### Quick gallery workflow
+
+1. Add your photos in **MosaicLab**.
+2. Open **Gallery Composer**, enable the gallery layout, and enter the exhibition title/subtitle.
+3. Add titles, artist credits, and optional HTTPS links to the artwork labels.
+4. Check the live wall preview, adjust poster dimensions or grid columns for QR-code readability, then export the PDF.
+5. Print at **Actual Size / 100%**, check calibration, scan the physical QR labels, and tape/mount the panels.
+
 ## R5 / v0.6 MosaicLab
 
 - **Multi-photo poster studio:** add 1–12 local PNG, JPEG, or WebP photos to an editable collage using a configurable 1–6 column grid.
@@ -117,7 +137,9 @@ R3: safe, limited native SVG import and vector-preserving printable PDFs (v0.4).
 
 R4: local Project Vault and portable backups (v0.5).
 
-R5: MosaicLab editable photo grids with v1-to-v2 project migration (v0.6). Future: physical exhibit workflows with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
+R5: MosaicLab editable photo grids with v1-to-v2 project migration (v0.6).
+
+R6: Gallery Composer exhibition titles, artwork credits, and local QR labels (v0.7). Future: more physical exhibit workflows with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
 
 ## License
 
