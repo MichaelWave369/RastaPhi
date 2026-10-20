@@ -63,7 +63,7 @@ export function galleryLabelHeight(cellHeight: number, active: boolean): number 
   return active ? cellHeight * .25 : 0;
 }
 
-export function shortenText(ctx: Pick<CanvasRenderingContext2D, 'measureText'>, value: string, maxWidth: number): string {
+export function shortenText(ctx: { measureText(text: string): { width: number } }, value: string, maxWidth: number): string {
   if (ctx.measureText(value).width <= maxWidth) return value;
   let left = 0, right = value.length;
   while (left < right) {
