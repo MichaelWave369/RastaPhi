@@ -66,7 +66,7 @@ describe('RastaPhi Creative Bridge v1', () => {
       kind: 'raster', name: 'image.png', dataUrl: 'https://example.org/img.png',
     } }, settings)).toThrow();
     expect(() => bridgeToProject({ ...input, sourceUrl: 'javascript:alert(1)' }, settings)).toThrow();
-    expect(() => bridgeToProject({ ...input, sourceApp: '<script>' }, settings)).not.toThrow();
+    expect(() => bridgeToProject({ ...input, sourceApp: '<script>' }, settings)).toThrow();
     expect(() => bridgeToProject({ ...input, sourceApp: '' }, settings)).toThrow();
     expect(() => bridgeToProject({ ...input, version: 99 }, settings)).toThrow(/version/);
     expect(() => bridgeToProject({ ...input, settings: { ...settings, posterWidth: -2 } }, settings)).toThrow();
