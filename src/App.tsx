@@ -400,7 +400,7 @@ function App() {
 
         <div className="workspace-heading">
           <div className="section-id"><span>01</span><div><strong>THE STUDIO</strong><small>Make something larger than life.</small></div></div>
-          <span className="version-pill"><span /> RASTAPHI R6 · V0.7</span>
+          <span className="version-pill"><span /> RASTAPHI R7 · V0.8</span>
         </div>
 
         <div className="workspace">
@@ -552,7 +552,7 @@ function App() {
             </section>
             <MosaicLab recipe={mosaicSource} onChange={updateMosaic} flatten={flattenMosaic} processing={mosaicProcessing} />
             <GalleryComposer recipe={mosaicSource} onChange={updateMosaic}
-              posterWidth={posterWidth} posterHeight={posterHeight} />
+              posterWidth={posterWidth} posterHeight={posterHeight} layout={layout} />
             <ProjectVault title={projectTitle} setTitle={setProjectTitle}
               snapshot={snapshotProject} restore={restoreProject} />
           </aside>
