@@ -1,0 +1,14 @@
+{
+  "format": "rastaphi-creative-bridge",
+  "version": 1,
+  "sourceApp": "Creative Bridge sample (not an external integration)",
+  "sourceUrl": "",
+  "creator": "RastaPhi example",
+  "title": "Nested Geometry Print Test",
+  "createdAt": "2026-10-19T22:00:00.000Z",
+  "asset": {
+    "kind": "svg",
+    "name": "nested-geometry.svg",
+    "markup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 240 240\"><rect width=\"240\" height=\"240\" fill=\"#f5efde\"/><circle cx=\"120\" cy=\"120\" r=\"99\" fill=\"none\" stroke=\"#273e52\" stroke-width=\"8\"/><circle cx=\"120\" cy=\"120\" r=\"70\" fill=\"none\" stroke=\"#547d87\" stroke-width=\"7\"/><circle cx=\"120\" cy=\"120\" r=\"42\" fill=\"none\" stroke=\"#db9a56\" stroke-width=\"6\"/><path d=\"M120 8 L120 232 M8 120 L232 120\" fill=\"none\" stroke=\"#c49762\" stroke-width=\"3\"/><text x=\"120\" y=\"125\" fill=\"#243341\" font-size=\"15\" text-anchor=\"middle\">RastaPhi</text></svg>"
+  }
+}

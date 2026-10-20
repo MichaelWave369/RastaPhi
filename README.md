@@ -6,6 +6,21 @@ RastaPhi is an original, MIT-licensed, local-first wall-art and large-format pos
 
 **Live site after GitHub Pages is enabled:** https://michaelwave369.github.io/RastaPhi/
 
+## R8 / v0.9 Creative Bridge
+
+RastaPhi now supports an explicit **local Creative Bridge handoff** for sharing artwork and exhibition designs between compatible apps.
+
+- **Export Bridge:** save the current artwork (raster, sanitized SVG, or editable MosaicLab/Gallery Composer source) and active print settings as a self-contained `.rastaphi-bridge.json` file. No server upload occurs.
+- **Import Bridge:** load a compatible handoff produced by RastaPhi or any other app that implements the documented format. Check source information and confirm before replacing your unsaved artwork.
+- **Safe import:** images must be embedded data URLs, SVG is re-sanitized, and remote links are metadata only. No automatic fetching, script execution, or direct browser messaging.
+- **Print settings:** handoffs may include complete RastaPhi print settings. External apps can omit these so the existing local printer settings remain in effect.
+- **Project Vault preserved:** normal `.rastaphi.json` saves still work. A Creative Bridge handoff can be imported and then saved as a regular Project Vault project.
+- **Starter sample:** import `examples/creative-bridge-v1.svg.json` to verify vector shape handling before wiring a third-party app.
+
+**This is the receiving and exporting format, not a live direct integration with another repo yet.** Domistika, Silicon Louvre, and PixelForge can adopt the protocol in their own future PRs.
+
+Full JSON contract, supported assets, and an example source-app exporter: [Creative Bridge v1](docs/CREATIVE_BRIDGE_V1.md).
+
 ## R7 / v0.8 Exhibit Kit
 
 Take a Gallery Composer exhibition off the screen with a matching set of physical display materials.
@@ -164,7 +179,9 @@ R5: MosaicLab editable photo grids with v1-to-v2 project migration (v0.6).
 
 R6: Gallery Composer exhibition titles, artwork credits, and local QR labels (v0.7).
 
-R7: Exhibit Kit entrance card, placard PDF, and photo-free catalog manifest (v0.8). Future: project bridges with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
+R7: Exhibit Kit entrance card, placard PDF, and photo-free catalog manifest (v0.8).
+
+R8: Creative Bridge offline, portable artwork handoff v1 (v0.9). Next: implement first-party adapters in Domistika and Silicon Louvre, separately.
 
 ## License
 
