@@ -8,7 +8,7 @@ const raster = 'data:image/png;base64,' + btoa('safe-image');
 function fixture(): RastaProject {
   return {
     format: 'rastaphi-project',
-    version: 1,
+    version: 2,
     title: 'Network mural',
     savedAt: '2026-10-19T21:00:00.000Z',
     asset: { kind: 'raster', name: 'map.png', dataUrl: raster },
@@ -28,6 +28,13 @@ describe('RastaPhi Project Vault format', () => {
     const p = fixture();
     expect(parseProjectJSON(JSON.stringify(p))).toEqual(p);
   });
+  it('migrates a valid old v1 raster file to v2 in memory', () => {
+    const legacy = { ...fixture(), version: 1 };
+    const upgraded = parseProjectJSON(JSON.stringify(legacy));
+    expect(upgraded.version).toBe(2);
+    expect(upgraded.asset).toEqual(legacy.asset);
+    expect(upgraded.settings).toEqual(legacy.settings);
+  });
   it('supports sanitized SVG markup records', () => {
     const p: RastaProject = {
       ...fixture(),
@@ -37,6 +44,9 @@ describe('RastaPhi Project Vault format', () => {
   });
   it('rejects unsupported format, bad dimensions and unsafe asset types', () => {
     expect(() => validateProject({ ...fixture(), version: 999 })).toThrow(/Unsupported/);
+    expect(() => validateProject({ ...fixture(), version: 1, asset: {
+      kind: 'mosaic', name: 'bad', photos: [], columns: 2, gapPercent: 2, background: '#ffffff', fit: 'cover',
+    } })).toThrow();
     expect(() => validateProject({ ...fixture(), settings: { ...fixture().settings, posterWidth: -1 } })).toThrow();
     expect(() => validateProject({ ...fixture(), settings: { ...fixture().settings, overlap: 8 } })).toThrow();
     expect(() => validateProject({ ...fixture(), asset: { kind: 'raster', name: 'x', dataUrl: 'https://example.com/tracker.png' } })).toThrow();

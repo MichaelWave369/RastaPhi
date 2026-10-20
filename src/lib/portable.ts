@@ -1,5 +1,6 @@
 import { parseProjectJSON, projectFilename, type ProjectAsset, type RastaProject } from './project';
 import { sanitizeSvg, type SafeSvg } from './svg';
+import { composeMosaic, validateMosaic, type MosaicRecipe } from './mosaic';
 
 function readAsDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -18,7 +19,9 @@ export async function captureProjectAsset(
   name: string,
   rasterFile: File | null,
   svgSource: SafeSvg | null,
+  mosaicSource: MosaicRecipe | null = null,
 ): Promise<ProjectAsset> {
+  if (mosaicSource) return validateMosaic(mosaicSource);
   if (svgSource) {
     return { kind: 'svg', name, markup: svgSource.markup };
   }
@@ -40,15 +43,21 @@ function decodeImage(src: string): Promise<HTMLImageElement> {
 
 export async function restoreProjectAsset(
   asset: ProjectAsset,
-): Promise<{ image: HTMLImageElement; svg: SafeSvg | null }> {
+  posterWidth: number,
+  posterHeight: number,
+): Promise<{ image: HTMLImageElement; svg: SafeSvg | null; mosaic: MosaicRecipe | null }> {
   if (asset.kind === 'raster') {
-    return { image: await decodeImage(asset.dataUrl), svg: null };
+    return { image: await decodeImage(asset.dataUrl), svg: null, mosaic: null };
+  }
+  if (asset.kind === 'mosaic') {
+    const safe = validateMosaic(asset);
+    return { image: await composeMosaic(safe, posterWidth, posterHeight), svg: null, mosaic: safe };
   }
   // Re-sanitize on every project load, including local IndexedDB entries.
   const safe = sanitizeSvg(asset.markup);
   const url = URL.createObjectURL(new Blob([safe.markup], { type: 'image/svg+xml' }));
   try {
-    return { image: await decodeImage(url), svg: safe };
+    return { image: await decodeImage(url), svg: safe, mosaic: null };
   } finally {
     URL.revokeObjectURL(url);
   }

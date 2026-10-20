@@ -6,6 +6,18 @@ RastaPhi is an original, MIT-licensed, local-first wall-art and large-format pos
 
 **Live site after GitHub Pages is enabled:** https://michaelwave369.github.io/RastaPhi/
 
+## R5 / v0.6 MosaicLab
+
+- **Multi-photo poster studio:** add 1–12 local PNG, JPEG, or WebP photos to an editable collage using a configurable 1–6 column grid.
+- **Collage editing:** reorder and remove source photos, choose crop/fill or contain for each tile, adjust tile gutters and background color. Live poster preview and ordinary multi-sheet PDF export update to reflect the composition.
+- **Local optimization:** source photos are resized to at most 1700 pixels on the longer edge and converted to compressed JPEG locally before composing. Per-input size limit 10 MB. This conserves memory and keeps portable project files manageable, but may reduce source detail.
+- **Project Vault v2:** saves every compressed input photo, photo order, and collage settings rather than only a flattened snapshot. Reopening a mosaic recreates the composition using the current poster dimensions.
+- **Backwards compatibility:** existing v1 `.rastaphi.json` files and locally saved projects remain readable and are migrated in memory to the v2 project schema when reopened.
+- **Flatten action:** converts an editable collage to a single raster poster; save a portable project file first if you want to retain individual photo editing.
+- **Limitations:** a collage is rasterized before PDF tile export; SVG vector preservation continues to work for individual SVG artwork, but mosaics do not yet support per-photo SVG vectors. The measured Blueprint Lab reference grid is still drawn as PDF vectors. Physical printer calibration remains necessary.
+
+All photos remain local to the browser; there are no network uploads. The optional Project Vault portable backup embeds the photos, so handle those files as private images if the source material is personal.
+
 ## R4 / v0.5 Project Vault
 
 Save and reopen complete poster projects without an account or cloud storage.
@@ -17,7 +29,7 @@ Save and reopen complete poster projects without an account or cloud storage.
 - **Safe replacement workflow:** Opening a project warns before replacing unsaved edits. Deleting a local project requires confirmation.
 - **Local-first and manual:** No account, uploads, tracking, or automatic cloud sync. Browser storage can be cleared by the browser or user. Export/download portable project files regularly for durable backups.
 
-**Privacy note:** A portable project backup includes the embedded image. Treat `.rastaphi.json` files like the original photo: share them only when you intend to share the source artwork. The v1 format supports PNG, JPEG, WebP, or sanitized SVG. Project files are capped at approximately 44 MB and source SVGs at 2 MB; browser storage capacity varies. This is not an autosave system.
+**Privacy note:** A portable project backup includes the embedded image. Treat `.rastaphi.json` files like the original photo: share them only when you intend to share the source artwork. The v2 format supports PNG, JPEG, WebP, sanitized SVG, and editable local-photo collages. Old v1 projects remain readable. Project files are capped at approximately 44 MB and source SVGs at 2 MB; browser storage capacity varies. This is not an autosave system.
 
 ## R3 / v0.4 SVG Studio
 
@@ -103,7 +115,9 @@ R2: measured vector PDF grid, global tile alignment, blank technical grid worksh
 
 R3: safe, limited native SVG import and vector-preserving printable PDFs (v0.4).
 
-R4: local Project Vault and portable backups (v0.5). Future: physical exhibit workflows with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
+R4: local Project Vault and portable backups (v0.5).
+
+R5: MosaicLab editable photo grids with v1-to-v2 project migration (v0.6). Future: physical exhibit workflows with Domistika, Silicon Louvre, PixelForge, and other local-first creative projects.
 
 ## License
 

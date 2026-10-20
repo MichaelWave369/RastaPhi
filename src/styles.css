@@ -417,3 +417,28 @@ footer a { display: flex; align-items: center; gap: 8px; color: #e9c382; font-si
 .vault-row-actions button:last-child { color: #e9a69b; }
 .vault-row-actions button:disabled { opacity: .4; }
 .vault-footnote { color: #9eaea4; font-size: 10px; line-height: 1.6; margin: 17px 0 0; }
+
+
+/* R5 MosaicLab */
+.mosaic-card { border-color: #5c5a6a; background: #242630; }
+.mosaic-add { display: flex; justify-content: center; width: 100%; margin-top: 16px; }
+.mosaic-count { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 15px; font-size: 10px; color: #d9c28e; font-weight: 850; }
+.mosaic-count span { display: flex; align-items: center; gap: 5px; color: #a3bfa8; }
+.mosaic-photos { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; max-height: 390px; overflow-y: auto; }
+.mosaic-photo { display: flex; align-items: center; gap: 9px; padding: 8px; border: 1px solid #4b505e; border-radius: 5px; background: #171d28; min-width: 0; }
+.mosaic-photo img { width: 52px; height: 48px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+.mosaic-photo-meta { display: flex; flex: 1; flex-direction: column; gap: 8px; min-width: 0; }
+.mosaic-photo-meta strong { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mosaic-photo-buttons { display: flex; gap: 7px; }
+.mosaic-photo-buttons button { display: grid; place-items: center; background: #2b3443; color: #d7dfdd; border-radius: 4px; border: 1px solid #526071; padding: 5px; }
+.mosaic-photo-buttons button:last-child { color: #f0b0a5; }
+.mosaic-photo-buttons button:disabled { opacity: .3; cursor: not-allowed; }
+.mosaic-photo-buttons button:hover:not(:disabled) { background: #465268; }
+.mosaic-options { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; margin-top: 16px; border-top: 1px solid #484c5c; }
+.mosaic-options > label, .mosaic-gap-label label { font-size: 10px; font-weight: 900; color: #e6c78f; letter-spacing: .08em; }
+.mosaic-options select { appearance: auto; width: 100%; color: #f2eee3; background: #151d27; border: 1px solid #4c5965; padding: 10px; border-radius: 5px; font-size: 12px; }
+.mosaic-gap-label { display: flex; justify-content: space-between; align-items: center; }
+.mosaic-gap-label strong { font-size: 12px; color: #eed8a9; }
+.mosaic-options input[type="color"] { height: 36px; width: 75px; padding: 2px; border-radius: 4px; border: 1px solid #67717a; background: transparent; }
+.mosaic-flatten { border: 1px solid #718078; background: transparent; color: #d7dfd8; font-size: 10px; font-weight: 900; border-radius: 4px; padding: 11px 10px; margin-top: 20px; width: 100%; }
+.mosaic-flatten:hover:not(:disabled) { background: #38433c; }
