@@ -37,6 +37,20 @@ describe('MosaicLab editable recipe', () => {
     expect(() => validateMosaic({ ...recipe(), photos: Array(13).fill(recipe().photos[0]) })).toThrow();
   });
 
+  it('preserves optional gallery labels in existing v2 MosaicLab projects', () => {
+    const art = {
+      ...recipe(),
+      gallery: { enabled: true, title: 'Silicon Louvre', subtitle: 'The Stillness That Moves', showQr: true },
+      photos: [{ ...recipe().photos[0], title: 'Nested Bubbles', artist: 'RastaPhi', url: 'https://example.org/gallery' }],
+    };
+    expect(validateMosaic(art).photos[0].url).toBe('https://example.org/gallery');
+    expect(() => validateMosaic({ ...art, photos: [
+      { ...art.photos[0], url: 'javascript:alert(1)' },
+    ] })).toThrow(/HTTPS/);
+    expect(() => validateMosaic({ ...art, gallery: { ...art.gallery, title: '\tbad' } })).toThrow();
+    expect(validateMosaic(recipe()).gallery).toBeUndefined();
+  });
+
   it('accepts v2 mosaic project but rejects it under the legacy v1 schema', () => {
     const project: RastaProject = {
       format: 'rastaphi-project',

@@ -442,3 +442,23 @@ footer a { display: flex; align-items: center; gap: 8px; color: #e9c382; font-si
 .mosaic-options input[type="color"] { height: 36px; width: 75px; padding: 2px; border-radius: 4px; border: 1px solid #67717a; background: transparent; }
 .mosaic-flatten { border: 1px solid #718078; background: transparent; color: #d7dfd8; font-size: 10px; font-weight: 900; border-radius: 4px; padding: 11px 10px; margin-top: 20px; width: 100%; }
 .mosaic-flatten:hover:not(:disabled) { background: #38433c; }
+
+
+/* R6 Gallery Composer */
+.gallery-card { background:#222b2b; border-color:#4e6c66; }
+.gallery-card .section-title { color:#d5c595; }
+.gallery-toggle { display:flex; gap:9px; align-items:center; color:#eddfbc; font-size:10px; font-weight:900; letter-spacing:.04em; margin:19px 0 10px; cursor:pointer; }
+.gallery-toggle input { width:18px; height:18px; accent-color:#edc27b; }
+.gallery-fields { display:flex; flex-direction:column; gap:9px; padding:7px 0 18px; }
+.gallery-fields>label:not(.gallery-toggle),.gallery-work>label { display:flex; align-items:center; gap:6px; color:#e4c692; font-size:10px; letter-spacing:.07em; font-weight:850; }
+.gallery-fields>input,.gallery-work>input { width:100%; border:1px solid #546b62; border-radius:5px; padding:10px; background:#121d21; color:#f3ecdc; font-size:12px; }
+.gallery-fields>input::placeholder,.gallery-work>input::placeholder { color:#859991; }
+.gallery-toggle-qr { margin:5px 0 0; }
+.gallery-works-title { border-top:1px solid #46574f; padding:17px 0 10px; display:flex; align-items:center; justify-content:space-between; color:#e1c48e; font-size:10px; font-weight:850; letter-spacing:.06em; }
+.gallery-works-title span { color:#9db4a8; font-weight:700; letter-spacing:0; }
+.gallery-works { display:flex; flex-direction:column; max-height:570px; overflow-y:auto; gap:10px; }
+.gallery-work { border:1px solid #48605b; background:#172326; padding:12px; border-radius:6px; display:flex; flex-direction:column; gap:8px; }
+.gallery-work-heading { display:flex; align-items:center; gap:9px; min-width:0; margin-bottom:5px; }
+.gallery-work-heading span { color:#e8bf79; font-size:17px; font-weight:950; }
+.gallery-work-heading strong { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:11px; }
+.gallery-advisory { padding:12px; border-radius:5px; border:1px solid #826e4b; background:#35362b; font-size:10px; line-height:1.55; color:#e3d4ac; }

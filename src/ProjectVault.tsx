@@ -102,7 +102,7 @@ export default function ProjectVault({ title, setTitle, snapshot, restore }: Vau
   }
 
   return <section className="setting-card vault-card" aria-label="Project Vault">
-    <div className="section-title"><span>06 / PROJECT VAULT</span><Archive size={18} /></div>
+    <div className="section-title"><span>07 / PROJECT VAULT</span><Archive size={18} /></div>
     <strong className="setting-label">Keep your wall masterpieces.</strong>
     <p className="helper-text">Save your complete project privately on this device, or download a portable .rastaphi.json file to move it elsewhere.</p>
     <label className="vault-name-label" htmlFor="project-title">PROJECT NAME</label>

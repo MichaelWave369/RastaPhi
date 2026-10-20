@@ -15,6 +15,7 @@ import { exportPosterPDF } from './lib/pdf';
 import { sanitizeSvg, SVG_SIZE_LIMIT, type SafeSvg } from './lib/svg';
 import ProjectVault from './ProjectVault';
 import MosaicLab from './MosaicLab';
+import GalleryComposer from './GalleryComposer';
 import { composeMosaic, type MosaicRecipe } from './lib/mosaic';
 import { PROJECT_VERSION, type RastaProject, validateProject } from './lib/project';
 import { captureProjectAsset, restoreProjectAsset } from './lib/portable';
@@ -201,19 +202,22 @@ function App() {
     if (!mosaicSource) { setMosaicProcessing(false); return; }
     let cancelled = false;
     setMosaicProcessing(true);
-    composeMosaic(mosaicSource, posterWidth, posterHeight).then(result => {
-      if (cancelled) return;
-      setImage(result);
-      setImageName('MosaicLab photo wall');
-      setSvgSource(null);
-      setOriginalRasterFile(null);
-      setMosaicProcessing(false);
-    }).catch(err => {
-      if (cancelled) return;
-      setMosaicProcessing(false);
-      setNotice(err instanceof Error ? err.message : 'Unable to compose MosaicLab artwork.');
-    });
-    return () => { cancelled = true; };
+    // Debounce typography edits so every keystroke doesn't rebuild a 3000px canvas.
+    const timeout = setTimeout(() => {
+      composeMosaic(mosaicSource, posterWidth, posterHeight).then(result => {
+        if (cancelled) return;
+        setImage(result);
+        setImageName(mosaicSource.gallery?.enabled ? 'Gallery Composer exhibition' : 'MosaicLab photo wall');
+        setSvgSource(null);
+        setOriginalRasterFile(null);
+        setMosaicProcessing(false);
+      }).catch(err => {
+        if (cancelled) return;
+        setMosaicProcessing(false);
+        setNotice(err instanceof Error ? err.message : 'Unable to compose exhibition.');
+      });
+    }, 180);
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, [mosaicSource, posterWidth, posterHeight]);
 
   function updateMosaic(next: MosaicRecipe | null) {
@@ -320,7 +324,7 @@ function App() {
   }
 
   async function snapshotProject(title: string): Promise<RastaProject> {
-    if (!image) throw new Error('Wait until your artwork is ready before saving.');
+    if (!image || mosaicProcessing) throw new Error('Finish composing the latest gallery layout before saving.');
     const asset = await captureProjectAsset(image, imageName, originalRasterFile, svgSource, mosaicSource);
     return validateProject({
       format: 'rastaphi-project',
@@ -396,7 +400,7 @@ function App() {
 
         <div className="workspace-heading">
           <div className="section-id"><span>01</span><div><strong>THE STUDIO</strong><small>Make something larger than life.</small></div></div>
-          <span className="version-pill"><span /> RASTAPHI R5 · V0.6</span>
+          <span className="version-pill"><span /> RASTAPHI R6 · V0.7</span>
         </div>
 
         <div className="workspace">
@@ -547,6 +551,8 @@ function App() {
               <p className="helper-text">Grid units describe the printed artwork, not the scale of objects pictured. Verify printed measurements before technical use.</p>
             </section>
             <MosaicLab recipe={mosaicSource} onChange={updateMosaic} flatten={flattenMosaic} processing={mosaicProcessing} />
+            <GalleryComposer recipe={mosaicSource} onChange={updateMosaic}
+              posterWidth={posterWidth} posterHeight={posterHeight} />
             <ProjectVault title={projectTitle} setTitle={setProjectTitle}
               snapshot={snapshotProject} restore={restoreProject} />
           </aside>
@@ -629,10 +635,12 @@ function App() {
             </div>
 
             <div className={'print-quality band-' + qualityBand} aria-live="polite">
-              <div><strong>{mosaicSource ? 'MOSAICLAB COLLAGE' : svgSource ? 'VECTOR ARTWORK' : isBlankBlueprint ? 'VECTOR REFERENCE GRID' : 'ARTWORK RESOLUTION'}</strong>
+              <div><strong>{mosaicSource?.gallery?.enabled ? 'GALLERY EXHIBITION' : mosaicSource ? 'MOSAICLAB COLLAGE' : svgSource ? 'VECTOR ARTWORK' : isBlankBlueprint ? 'VECTOR REFERENCE GRID' : 'ARTWORK RESOLUTION'}</strong>
                 <span>{mosaicSource ? mosaicSource.photos.length + ' PHOTOS' : svgSource ? (effect === 'original' ? 'VECTOR PDF' : 'RASTER EFFECT') : isBlankBlueprint ? 'BLANK CANVAS' : sourcePpi ? sourcePpi + ' SOURCE PPI' : 'NO SOURCE'}</span></div>
               <p>{mosaicSource
-                ? 'Your collage is editable and will be saved with its source photos in Project Vault. PDF artwork is rasterized; measured Blueprint Lab grid lines remain vector.'
+                ? (mosaicSource.gallery?.enabled
+                  ? 'Exhibition titles, captions and QR codes are composed locally into a raster collage. Keep the editable photo metadata in Project Vault. Always test printed QR codes.'
+                  : 'Your collage is editable and will be saved with its source photos in Project Vault. PDF artwork is rasterized; measured Blueprint Lab grid lines remain vector.')
                 : svgSource
                 ? (effect === 'original'
                   ? 'Supported SVG geometry stays vector in PDF export, including across sheets. Text may use substitute PDF fonts.'

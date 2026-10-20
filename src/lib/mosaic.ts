@@ -1,4 +1,9 @@
 import type { Fit } from './layout';
+import QRCode from 'qrcode';
+import {
+  type GalleryConfig, cleanGalleryText, galleryHeaderHeight, galleryInk,
+  galleryLabelHeight, shortenText, validateGalleryConfig, validateGalleryLink,
+} from './gallery';
 
 export const MAX_MOSAIC_PHOTOS = 12;
 export const MAX_MOSAIC_DATA = 38 * 1024 * 1024;
@@ -7,6 +12,9 @@ const maxImageLength = 6 * 1024 * 1024;
 export interface MosaicPhoto {
   name: string;
   dataUrl: string;
+  title?: string;
+  artist?: string;
+  url?: string;
 }
 
 export interface MosaicRecipe {
@@ -17,6 +25,7 @@ export interface MosaicRecipe {
   gapPercent: number;
   background: string;
   fit: Fit;
+  gallery?: GalleryConfig;
 }
 
 const rasterUrl = /^data:image\/(?:png|jpeg|webp);base64,[a-zA-Z0-9+/=\r\n]+$/;
@@ -48,6 +57,12 @@ export function validateMosaic(value: unknown): MosaicRecipe {
     total += photo.dataUrl.length;
   }
   if (total > MAX_MOSAIC_DATA) throw new Error('Combined MosaicLab photos exceed the 38 MB limit.');
+  if (x.gallery !== undefined) validateGalleryConfig(x.gallery);
+  for (const photo of x.photos) {
+    if (photo.title !== undefined) cleanGalleryText(photo.title, 90);
+    if (photo.artist !== undefined) cleanGalleryText(photo.artist, 80);
+    if (photo.url !== undefined) validateGalleryLink(photo.url);
+  }
   return x as MosaicRecipe;
 }
 
@@ -124,21 +139,79 @@ export async function composeMosaic(
   if (!ctx) throw new Error('Canvas could not render this collage.');
   ctx.fillStyle = recipe.background;
   ctx.fillRect(0, 0, width, height);
-  const cells = mosaicCells(recipe.photos.length, recipe.columns, width, height, recipe.gapPercent);
+  const gallery = recipe.gallery?.enabled ? recipe.gallery : null;
+  const header = galleryHeaderHeight(height, !!gallery);
+  const cells = mosaicCells(recipe.photos.length, recipe.columns, width, height - header, recipe.gapPercent);
   const images = await Promise.all(recipe.photos.map(p => loadDataImage(p.dataUrl)));
+  const ink = galleryInk(recipe.background);
+  if (gallery) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = ink;
+    ctx.font = 'bold ' + Math.max(20, Math.floor(header * .35)) + 'px Arial, sans-serif';
+    ctx.fillText(shortenText(ctx, gallery.title || recipe.name, width * .91),
+      width / 2, header * .49);
+    if (gallery.subtitle) {
+      ctx.font = Math.max(12, Math.floor(header * .14)) + 'px Arial, sans-serif';
+      ctx.fillText(shortenText(ctx, gallery.subtitle, width * .9),
+        width / 2, header * .75);
+    }
+    ctx.textAlign = 'left';
+  }
+  const qrImages = gallery?.showQr ? await Promise.all(recipe.photos.map(async p => {
+    if (!p.url) return null;
+    const address = validateGalleryLink(p.url);
+    if (!address) return null;
+    // QR generation is entirely local. No destination is fetched.
+    const qr = await QRCode.toDataURL(address, {
+      errorCorrectionLevel: 'M', margin: 3, width: 256,
+      color: { dark: '#141b23', light: '#ffffffff' },
+    });
+    return loadDataImage(qr);
+  })) : [];
+
   cells.forEach((cell, i) => {
+    const photo = recipe.photos[i];
     const image = images[i];
+    const y = cell.y + header;
+    const labelH = galleryLabelHeight(cell.height, !!gallery);
+    const artH = cell.height - labelH;
     ctx.save();
     ctx.beginPath();
-    ctx.rect(cell.x, cell.y, cell.width, cell.height);
+    ctx.rect(cell.x, y, cell.width, artH);
     ctx.clip();
     const ratio = recipe.fit === 'cover'
-      ? Math.max(cell.width / image.naturalWidth, cell.height / image.naturalHeight)
-      : Math.min(cell.width / image.naturalWidth, cell.height / image.naturalHeight);
+      ? Math.max(cell.width / image.naturalWidth, artH / image.naturalHeight)
+      : Math.min(cell.width / image.naturalWidth, artH / image.naturalHeight);
     const dw = image.naturalWidth * ratio;
     const dh = image.naturalHeight * ratio;
-    ctx.drawImage(image, cell.x + (cell.width - dw) / 2, cell.y + (cell.height - dh) / 2, dw, dh);
+    ctx.drawImage(image, cell.x + (cell.width - dw) / 2, y + (artH - dh) / 2, dw, dh);
     ctx.restore();
+    if (!gallery) return;
+
+    const labelY = y + artH;
+    const padding = Math.max(8, Math.min(24, cell.width * .038));
+    const qrSize = Math.min(labelH * .78, cell.width * .25);
+    const qrPhysicalInches = qrSize / width * posterWidth;
+    const qrAllowed = gallery.showQr && qrImages[i] &&
+      qrSize >= 85 && qrPhysicalInches >= .95;
+    const qrWidth = qrAllowed ? qrSize + padding : 0;
+    const maxTextWidth = Math.max(10, cell.width - 2 * padding - qrWidth);
+    const title = photo.title?.trim() || photo.name.replace(/.[^.]+$/, '');
+    const fontSize = Math.max(9, Math.min(cell.width * .064, labelH * .31));
+    ctx.fillStyle = ink;
+    ctx.textAlign = 'left';
+    ctx.font = 'bold ' + fontSize + 'px Arial, sans-serif';
+    ctx.fillText(shortenText(ctx, title, maxTextWidth), cell.x + padding, labelY + labelH * .39);
+    if (photo.artist) {
+      ctx.font = Math.max(8, fontSize * .63) + 'px Arial, sans-serif';
+      ctx.fillText(shortenText(ctx, photo.artist.trim(), maxTextWidth),
+        cell.x + padding, labelY + labelH * .72);
+    }
+    if (qrAllowed && qrImages[i]) {
+      // Leave the QR quiet zone from the generator intact; don't overlay text.
+      ctx.drawImage(qrImages[i], cell.x + cell.width - qrSize - padding,
+        labelY + (labelH - qrSize) / 2, qrSize, qrSize);
+    }
   });
   const image = await loadDataImage(canvas.toDataURL('image/jpeg', .93));
   return image;
