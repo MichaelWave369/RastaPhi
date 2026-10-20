@@ -14,10 +14,11 @@ import { exportCalibrationPDF } from './lib/calibration';
 import { exportPosterPDF } from './lib/pdf';
 import { sanitizeSvg, SVG_SIZE_LIMIT, type SafeSvg } from './lib/svg';
 import ProjectVault from './ProjectVault';
+import CreativeBridgePanel from './CreativeBridgePanel';
 import MosaicLab from './MosaicLab';
 import GalleryComposer from './GalleryComposer';
 import { composeMosaic, type MosaicRecipe } from './lib/mosaic';
-import { PROJECT_VERSION, type RastaProject, validateProject } from './lib/project';
+import { PROJECT_VERSION, type ProjectSettings, type RastaProject, validateProject } from './lib/project';
 import { captureProjectAsset, restoreProjectAsset } from './lib/portable';
 import { type BlueprintOptions, type GridStep, type GridInk, gridLinesForRegion, GRID_INK_RGB } from './lib/blueprint';
 
@@ -323,6 +324,14 @@ function App() {
     }
   }
 
+  function currentEditorSettings(): ProjectSettings {
+    return {
+      posterWidth, posterHeight, ratioLocked, paper, orientation, margin, overlap,
+      fit, effect, dotSizeMm, ink, paperColor, guide, grid, blueprint,
+      blankBlueprint: isBlankBlueprint, selectedSheet: currentSheet, view,
+    };
+  }
+
   async function snapshotProject(title: string): Promise<RastaProject> {
     if (!image || mosaicProcessing) throw new Error('Finish composing the latest gallery layout before saving.');
     const asset = await captureProjectAsset(image, imageName, originalRasterFile, svgSource, mosaicSource);
@@ -332,11 +341,7 @@ function App() {
       title: title.trim(),
       savedAt: new Date().toISOString(),
       asset,
-      settings: {
-        posterWidth, posterHeight, ratioLocked, paper, orientation, margin, overlap,
-        fit, effect, dotSizeMm, ink, paperColor, guide, grid, blueprint,
-        blankBlueprint: isBlankBlueprint, selectedSheet: currentSheet, view,
-      },
+      settings: currentEditorSettings(),
     });
   }
 
@@ -400,7 +405,7 @@ function App() {
 
         <div className="workspace-heading">
           <div className="section-id"><span>01</span><div><strong>THE STUDIO</strong><small>Make something larger than life.</small></div></div>
-          <span className="version-pill"><span /> RASTAPHI R7 · V0.8</span>
+          <span className="version-pill"><span /> RASTAPHI R8 · V0.9</span>
         </div>
 
         <div className="workspace">
@@ -555,6 +560,8 @@ function App() {
               posterWidth={posterWidth} posterHeight={posterHeight} layout={layout} />
             <ProjectVault title={projectTitle} setTitle={setProjectTitle}
               snapshot={snapshotProject} restore={restoreProject} />
+            <CreativeBridgePanel snapshot={() => snapshotProject(projectTitle)}
+              restore={restoreProject} getSettings={currentEditorSettings} />
           </aside>
 
           <section className="preview-col" aria-label="Poster preview and export">
