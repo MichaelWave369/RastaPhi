@@ -462,3 +462,20 @@ footer a { display: flex; align-items: center; gap: 8px; color: #e9c382; font-si
 .gallery-work-heading span { color:#e8bf79; font-size:17px; font-weight:950; }
 .gallery-work-heading strong { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:11px; }
 .gallery-advisory { padding:12px; border-radius:5px; border:1px solid #826e4b; background:#35362b; font-size:10px; line-height:1.55; color:#e3d4ac; }
+
+
+/* R7 Exhibit Kit */
+.exhibit-kit {
+  margin: 16px 0 12px; border: 1px solid #8e7650; border-radius: 7px;
+  background: #30352e; padding: 15px;
+}
+.exhibit-kit-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; color: #edc27b; }
+.exhibit-kit-head > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.exhibit-kit-head strong { font-size: 12px; font-weight: 950; letter-spacing: .06em; }
+.exhibit-kit-head small { color: #b9c8b3; font-size: 10px; line-height: 1.4; }
+.exhibit-kit button { display: flex; width: 100%; justify-content: center; align-items: center; gap: 9px; border: 1px solid #ddbb78; border-radius: 5px; padding: 12px 7px; font-size: 10px; font-weight: 900; letter-spacing: .03em; }
+.exhibit-kit-primary { background: #e9c283; color: #1b2727; }
+.exhibit-kit-secondary { background: #1b292b; color: #edd1a0; margin-top: 8px; }
+.exhibit-kit button:disabled { opacity: .48; cursor: not-allowed; }
+.exhibit-kit button:hover:not(:disabled) { filter: brightness(1.10); }
+.exhibit-kit p { font-size: 10px; line-height: 1.55; color: #c2cdbf; margin: 13px 0 0; }

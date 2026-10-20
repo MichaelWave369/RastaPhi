@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Images, QrCode, Type, ExternalLink } from 'lucide-react';
+import { Images, QrCode, Type, ExternalLink, FileDown, ClipboardList } from 'lucide-react';
+import type { Layout } from './lib/layout';
+import { downloadExhibitManifest, placardPages } from './lib/exhibit';
+import { exportExhibitKitPDF } from './lib/exhibit-pdf';
 import { type MosaicRecipe, validateMosaic } from './lib/mosaic';
 import { validateGalleryLink } from './lib/gallery';
 
@@ -8,14 +11,40 @@ interface Props {
   onChange: (recipe: MosaicRecipe | null) => void;
   posterWidth: number;
   posterHeight: number;
+  layout: Layout | null;
 }
 
 const defaultGallery = {
   enabled: false, title: 'THE GALLERY', subtitle: 'An exhibition of original work', showQr: true,
 };
 
-export default function GalleryComposer({ recipe, onChange, posterWidth, posterHeight }: Props) {
+export default function GalleryComposer({ recipe, onChange, posterWidth, posterHeight, layout }: Props) {
   const [message, setMessage] = useState('');
+  const [exportingKit, setExportingKit] = useState(false);
+
+  async function downloadKit() {
+    if (!recipe || !layout || exportingKit) return;
+    setExportingKit(true);
+    setMessage('');
+    try {
+      await exportExhibitKitPDF(recipe, layout);
+      setMessage('Exhibit Kit PDF generated. Print at Actual Size / 100% and verify every QR code.');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not generate Exhibit Kit PDF.');
+    } finally {
+      setExportingKit(false);
+    }
+  }
+
+  function downloadManifest() {
+    if (!recipe) return;
+    try {
+      downloadExhibitManifest(recipe);
+      setMessage('Photo-free exhibit manifest downloaded. This metadata file contains credits and QR URLs but no artwork images.');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not export exhibit manifest.');
+    }
+  }
   const g = recipe?.gallery ?? defaultGallery;
 
   function update(next: MosaicRecipe) {
@@ -88,6 +117,21 @@ export default function GalleryComposer({ recipe, onChange, posterWidth, posterH
             onBlur={e => changePhoto(i, 'url', e.target.value.trim())}/>
         </div>)}
       </div>
+      {g.enabled && <div className="exhibit-kit">
+        <div className="exhibit-kit-head">
+          <ClipboardList size={18} />
+          <div><strong>EXHIBITION KIT</strong><small>Entrance card + {recipe.photos.length} placards / {placardPages(recipe.photos.length)} placard sheets</small></div>
+        </div>
+        <button type="button" className="exhibit-kit-primary" disabled={!layout || exportingKit}
+          onClick={() => void downloadKit()}>
+          <FileDown size={16}/> {exportingKit ? 'CREATING EXHIBIT PDF...' : 'DOWNLOAD EXHIBIT KIT PDF'}
+        </button>
+        <button type="button" className="exhibit-kit-secondary" disabled={exportingKit}
+          onClick={downloadManifest}>
+          <FileDown size={15}/> DOWNLOAD PHOTO-FREE MANIFEST
+        </button>
+        <p>Kit uses the current printer paper size, with a separate entrance card and two cut-out placards per sheet. QR codes are generated at print-friendly sizes and remain clickable in the PDF.</p>
+      </div>}
       <p className="gallery-advisory">{g.showQr && qrSizeIn < .95
         ? 'QR warning: these panels are too small for a roughly 1-inch QR code. Enlarge the poster or reduce columns and rows; small QR codes will be omitted.'
         : 'QR codes are generated locally. Print at 100% and test every code with a real phone before mounting the wall.'}</p>
