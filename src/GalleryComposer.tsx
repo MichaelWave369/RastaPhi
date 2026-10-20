@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Images, QrCode, Type, ExternalLink, FileDown, ClipboardList } from 'lucide-react';
 import type { Layout } from './lib/layout';
-import { downloadExhibitManifest, createExhibitManifest, placardPages } from './lib/exhibit';
+import { downloadExhibitManifest, placardPages } from './lib/exhibit';
 import { exportExhibitKitPDF } from './lib/exhibit-pdf';
 import { type MosaicRecipe, validateMosaic } from './lib/mosaic';
 import { validateGalleryLink } from './lib/gallery';
