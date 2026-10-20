@@ -22,7 +22,7 @@ export interface CreativeBridge {
 
 function humanText(value: unknown, field: string, limit: number, required = false): string {
   if (typeof value !== 'string' || value.length > limit ||
-      /[\u0000-\u001f\u007f]/.test(value) || (required && !value.trim())) {
+      /[\u0000-\u001f\u007f<>]/.test(value) || (required && !value.trim())) {
     throw new Error('Invalid Creative Bridge ' + field + '.');
   }
   return value.trim();
